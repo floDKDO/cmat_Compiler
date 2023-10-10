@@ -8,6 +8,7 @@ COMMENT             "//".*|\/\*([^\*]|\*[^\/])*\*\/
 INT                 0|[1-9][0-9]*
 FLOAT               ([0-9]+\.|\.[0-9])[0-9]*([eE][+-]?[0-9]+)?(f|F)?
 STR                 \"([^\"\\]|\\.)*\"
+WHITESPACE          [ \t\n\v\f\r]+
 
 %%
 
@@ -41,6 +42,8 @@ matrix              {return MATRIX;}
 ~                   {return TILDE;}
 \[                  {return O_CROCH;}
 \]                  {return C_CROCH;}
+\{                  {return O_ACC;}
+\}                  {return C_ACC;}
 ".."                {return INTERV;}
 
 {ID}                {return IDENT;}
@@ -49,5 +52,17 @@ matrix              {return MATRIX;}
 {STR}               {return C_STR;}
 
 {COMMENT}           {/*Ignore*/; }
+{WHITESPACE}        {/*Ignore*/;}
 
 %%
+
+int yywrap()
+{
+	return 1;
+}
+
+int main(int argc, char* argv[])
+{
+	while(yylex() != 0);
+	return 0;
+}
