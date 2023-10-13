@@ -12,47 +12,34 @@ WHITESPACE          [ \t\n\v\f\r]+
 
 %%
 
-\;                  {return SEMICOL;}
-,                   {return COMMA;}
+[\;,=\+\-\*\/\(\)\{\}~\[\]]     {return yytext[0];}
 
-=                   {return EQUAL;}
-\+                  {return PLUS;}
-\-                  {return MINUS;}
-\*                  {return MULT;}
-\/                  {return DIV;}
-"++"                {return INCR;}
-"--"                {return DECR;}
+"++"                			{return INCR;}
+"--"                			{return DECR;}
 
-int                 {return INT;}
-float               {return FLOAT;}
-if                  {return IF;}
-else                {return ELSE;}
-while               {return WHILE;}
-for                 {return FOR;}
-return              {return RETURN;}
+int                 			{return INT;}
+float               			{return FLOAT;}
+if                  			{return IF;}
+else                			{return ELSE;}
+while               			{return WHILE;}
+for                 			{return FOR;}
+return              			{return RETURN;}
 
-\(                  {return O_PAREN;}
-\)                  {return C_PAREN;}
-main                {return MAIN;}
-printf              {return PRINTF;}
-print               {return PRINT;}
-printmat            {return PRINTMAT;}
+main                			{return MAIN;}
+printf              			{return PRINTF;}
+print               			{return PRINT;}
+printmat            			{return PRINTMAT;}
 
-matrix              {return MATRIX;}
-~                   {return TILDE;}
-\[                  {return O_CROCH;}
-\]                  {return C_CROCH;}
-\{                  {return O_ACC;}
-\}                  {return C_ACC;}
-".."                {return INTERV;}
+matrix              			{return MATRIX;}
+".."                			{return INTERV;}
 
-{ID}                {return IDENT;}
-{INT}               {return C_INT;}
-{FLOAT}             {return C_FLOAT;}
-{STR}               {return C_STR;}
+{ID}                			{return IDENT;}
+{INT}               			{return C_INT;}
+{FLOAT}             			{return C_FLOAT;}
+{STR}               			{return C_STR;}
 
-{COMMENT}           {/*Ignore*/; }
-{WHITESPACE}        {/*Ignore*/;}
+{COMMENT}           			{/*Ignore*/; }
+{WHITESPACE}        			{/*Ignore*/;}
 
 %%
 
