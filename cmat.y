@@ -87,9 +87,10 @@ void freeTS(){
 
 %%
 
-start : %empty
+start : %empty //grammaire temporaire
+;
 
-// TODO : grammaires
+// TODO : faire les grammaires
 
 %%  
 
