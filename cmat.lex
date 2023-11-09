@@ -1,7 +1,9 @@
 %{
-#include "define.h"
-
+#include "cmat.tab.h"
 %}
+
+%option nounput
+%option noyywrap
 
 ID                  [a-zA-Z][a-zA-Z0-9]*
 COMMENT             "//".*|\/\*([^\*]|\*[^\/])*\*\/
@@ -42,14 +44,3 @@ matrix              			{return MATRIX;}
 {WHITESPACE}        			{/*Ignore*/;}
 
 %%
-
-int yywrap()
-{
-	return 1;
-}
-
-int main(int argc, char* argv[])
-{
-	while(yylex() != 0);
-	return 0;
-}
