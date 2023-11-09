@@ -1,6 +1,6 @@
 # Projet-Compilation
 
-##Utilisation du makefile
+## Utilisation du makefile
 - *make* crée un exécutable nommé "cmat" : pour exécuter le programme, taper "./cmat"
 - *make clean* supprimme tous les fichiers créés par lex et bison, les .o, l'exécutable "./cmat" et les fichiers générés par *make doc*
 - *make doc* crée deux fichiers utiles :
