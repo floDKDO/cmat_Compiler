@@ -5,12 +5,12 @@
 #include <stdlib.h>
     
 typedef struct symbole {
-    char nom;
+    char* nom;
     struct symbole* suivant;
 } symbole;
 
 void initTS();
-int addTableSymb(char symb);
+int addTableSymb(char* symb);
 symbole* getTableSymb(int index);
 void printTS();
 void freeTS();
@@ -20,49 +20,58 @@ symbole* TS;
 extern int yylex();
 void yyerror(const char* msg);
 
+//Initialisation de la table des symboles avec le cas d'arrêt
 void initTS(){
     TS = (symbole*) malloc(sizeof(symbole*));
     TS->suivant = TS;
 };
 
+//Affichage de chaque symbole
 void printTS(){
     for (symbole *iterator = TS ; iterator->suivant != iterator ; iterator = iterator->suivant){
-        //printf("%c : %d\n", iterator->nom, iterator->set);
+        printf("%s\n", iterator->nom);
     }
 }
 
-int addTableSymb(char name) {
+//Ajout d'un symbole sans doublon avec l'indice dans la liste en retour
+int addTableSymb(char* name) {
     
+    //On recherche si le nom existe déjà
     int i = 0;
     symbole *iterator;
     for (iterator = TS ; iterator->suivant != iterator ; iterator = iterator->suivant){
-        if (iterator->nom == name) {
+        if (strcmp(iterator->nom, name) == 0) {
             return i;
         }
         i++;
     }
 
+    //Sinon on l'ajoute
     iterator->nom = name;
-    //iterator->set = 0;
     symbole *symb = (symbole*) malloc(sizeof(symbole*));
     symb->suivant = symb;
     iterator->suivant = symb;
     return i;
 }
 
+//Recherche d'un symbole à partir de son indice
 symbole* getTableSymb(int index){
     int i = 0;
     symbole *iterator = TS;
+    //On avance dans la liste jusqu'à index ou fin de liste
     while (iterator->suivant != iterator && i < index){
         iterator = iterator->suivant;
         i++;
     }
+    //On vérifie dans quel cas d'arrêt du while on est
     if (i == index){
         return iterator;
     }
+    //Symbole non trouvé
     fprintf(stderr, "Table des Sybloles : index trop grand\n");
 }
 
+//Ne surtout pas oublier de libérer les symboles
 void freeTS(){
     symbole* pre_iterator = TS;
     symbole* iterator = pre_iterator->suivant;
