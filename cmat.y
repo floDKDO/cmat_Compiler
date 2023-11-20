@@ -94,12 +94,72 @@ void freeTS(){
 
 %start start
 
-%%
+%% //grammaire temporaire
 
-start : %empty //grammaire temporaire
-;
+start : type element_fonction;
 
-// TODO : faire les grammaires
+
+
+declaration : type liste_element
+
+liste_element : liste_element ',' element | element
+
+element : element_variable | element_fonction;
+
+element_variable : IDENT 
+            | IDENT '=' valeur 
+            | IDENT liste_dimension
+            | IDENT liste_dimension '=' valeur_tableau;
+
+
+element_fonction : IDENT '(' ')'
+            | IDENT '(' liste_argument ')'
+            | IDENT '(' ')' corps
+            | MAIN '(' ')' corps
+            | IDENT '(' liste_argument ')' corps;
+
+
+type : INT | FLOAT | MATRIX;
+
+liste_dimension : liste_dimension dimension | dimension;
+dimension : '[' C_INT ']';
+
+liste_argument : liste_argument ',' argument | argument;
+argument : type IDENT | type IDENT '=' constante;
+constante : C_INT | C_FLOAT;
+
+valeur_tableau : liste_vecteur | '{' valeur_tableau '}';
+liste_vecteur : liste_vecteur ',' valeur_vecteur | valeur_vecteur;
+valeur_vecteur : '{' liste_nombre '}';
+
+liste_nombre : liste_entiers | liste_flottants
+liste_flottants : liste_flottants ',' C_FLOAT | C_FLOAT;
+liste_entiers : liste_entiers ',' C_INT | C_INT;
+
+corps : '{' liste_instruction '}';
+
+affectation : IDENT '=' expression;
+
+expression : valeur
+            | expression op expression
+            | '-' expression
+            | expression INCR
+            | expression DECR
+            ;
+
+op : '+' | '-' | '*' | '/'
+
+valeur : IDENT
+        | constante
+        | IDENT '[' valeur INTERV valeur ']'
+        | appel_fonction;
+
+appel_fonction : IDENT '(' ')'
+                | IDENT '('  ')';
+
+liste_instruction : liste_instruction ';' instruction | instruction;
+
+instruction : declaration | affectation | appel_fonction;
 
 %%  
 
