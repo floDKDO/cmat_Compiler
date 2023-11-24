@@ -46,29 +46,34 @@ liste_instruction : liste_instruction instruction
 ;
 
 instruction : declaration_variable ';' 
-	    | assignation_variable ';'
 	    | declaration_fonction
+	    | liste_operation ';'
 	    | appel_fonction ';'
 	    | RETURN C_INT ';'
 ;
 
-assignation_variable : liste_variable
+
+declaration_variable : type liste_variable_declaree
 ;
 
-declaration_variable : type liste_variable
+liste_variable_declaree : liste_variable_declaree ',' variable_declaree
 ;
 
-liste_variable : liste_variable ',' element_variable
-		| element_variable
-;
-
-element_variable : IDENT 
-		| IDENT assign expression
-		| IDENT assign IDENT liste_intervalle
-		| incr_et_decr
-		| IDENT liste_dimension
+variable_declaree : IDENT
+                | IDENT '=' expression
+                | IDENT '=' IDENT intervalle_matrix
+                | IDENT liste_dimension
                 | IDENT liste_dimension '=' valeur_tableau
-                | IDENT liste_dimension '=' expression
+;
+
+
+liste_operation : liste_operation ',' operation
+		| operation
+;
+
+operation : expression
+	| IDENT assign operation
+	| IDENT liste_dimension assign operation
 ;
 
 declaration_fonction : type IDENT '(' liste_parametre ')' corps
@@ -86,10 +91,10 @@ liste_parametre : liste_parametre ',' parametre | parametre
 liste_argument : liste_argument ',' argument | argument
 ;
 
-parametre : type IDENT | %empty
+parametre : type IDENT
 ;
 
-argument :  IDENT assign expression | expression | %empty
+argument :  IDENT assign expression | expression
 ; 
 
 expression : valeur 
@@ -118,13 +123,15 @@ expression : valeur
             | '&' expression %prec UNARY
             | '(' expression ')'
 ;
-   
 
-liste_intervalle : liste_intervalle intervalle | intervalle
-;
        
-intervalle : '[' '*' ']' | '[' INTERV ']' | '[' INTERV ';' C_INT ']' | '[' C_INT ';' C_INT ']' | '[' '*' ';' '*' ']'
+intervalle_matrix : '[' liste_rangee ']' | '[' liste_rangee ']' '[' liste_rangee ']'
 ;
+
+liste_rangee : liste_rangee ';' rangee
+;
+
+rangee : '*' | INTERV | C_FLOAT
 
 liste_dimension : liste_dimension dimension | dimension
 ;
@@ -133,11 +140,11 @@ dimension : '[' C_INT ']'
 ;
 
 valeur_tableau : valeur_vecteur 
-		| '{' liste_vecteur '}'
+		| '{' liste_tableau '}'
 ;
 		
-liste_vecteur : liste_vecteur ',' valeur_vecteur 
-		| valeur_vecteur
+liste_tableau : liste_tableau ',' valeur_tableau 
+		| valeur_tableau
 ;
 		
 valeur_vecteur : '{' liste_nombre '}'
@@ -158,7 +165,7 @@ incr_et_decr : IDENT INCR | IDENT DECR | INCR IDENT | DECR IDENT
 type : INT | FLOAT | MATRIX
 ;
 
-valeur : IDENT | constante | IDENT liste_dimension
+valeur : IDENT | constante | IDENT liste_dimension | IDENT intervalle_matrix
 ;
 
 constante : C_INT | C_FLOAT 

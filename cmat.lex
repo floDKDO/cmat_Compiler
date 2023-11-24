@@ -7,7 +7,7 @@
 
 ID                  [a-zA-Z][a-zA-Z0-9]*
 COMMENT             "//".*|\/\*[^*]*\*+(?:[^\/*][^*]*\*+)*\/
-INTERV 	     [0-9]\.\.[0-9]
+INTERV 	            [0-9]+\.\.[0-9]+
 INT                 0|[1-9][0-9]*
 FLOAT               ([0-9]+\.|\.[0-9])[0-9]*([eE][+-]?[0-9]+)?(f|F)?
 STR                 \"([^\"\\]|\\.)*\"
@@ -19,20 +19,20 @@ WHITESPACE          [ \t\n\v\f\r]+
 
 "++"                			{return INCR;}
 "--"                			{return DECR;}
-"<=" 					{return LE;}
-">=" 					{return GE;}
-"==" 					{return EQ;}
-"!=" 					{return NE;}
-"+=" 					{return PLUS_ASSIGN;}
-"-=" 					{return MINUS_ASSIGN;}
-"*=" 					{return MULT_ASSIGN;}
-"/=" 					{return DIV_ASSIGN;}
-"%=" 					{return MOD_ASSIGN;}
-"&=" 					{return AND_ASSIGN;}
-"^=" 					{return XOR_ASSIGN;}
-"|=" 					{return OR_ASSIGN;}
-"&&" 					{return LOGICAL_AND;}
-"||" 					{return LOGICAL_OR;} 	
+"<=" 					        {return LE;}
+">=" 					        {return GE;}
+"==" 					        {return EQ;}
+"!=" 					        {return NE;}
+"+=" 					        {return PLUS_ASSIGN;}
+"-=" 					        {return MINUS_ASSIGN;}
+"*=" 					        {return MULT_ASSIGN;}
+"/=" 					        {return DIV_ASSIGN;}
+"%=" 					        {return MOD_ASSIGN;}
+"&=" 					        {return AND_ASSIGN;}
+"^=" 					        {return XOR_ASSIGN;}
+"|=" 					        {return OR_ASSIGN;}
+"&&" 					        {return LOGICAL_AND;}
+"||" 					        {return LOGICAL_OR;} 	
 
 
 int                 			{return INT;}
@@ -49,7 +49,7 @@ print               			{return PRINT;}
 printmat            			{return PRINTMAT;}
 
 matrix              			{return MATRIX;}
-{INTERV}               		{return INTERV;}
+{INTERV}               		    {return INTERV;}
 
 {ID}                			{return IDENT;}
 {INT}               			{return C_INT;}
