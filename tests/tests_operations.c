@@ -35,7 +35,7 @@ int main()
 	
 	float b = (+2 + 2);
 	
-	int x = x[0..2; 2][*;*][*];
+	int x = x[0..2; 2][*;*];
 	
 	int x = &x;
 	int x = *x;
@@ -49,14 +49,14 @@ int main()
 	int x = x | x;
 	int x = x ^ x;
 	
-	int x += 2;
-	int x -= 2;
-	int x *= 2;
-	int x /= 2;
-	int x %= 2;
-	int x &= 2;
-	int x |= 2;
-	int x ^= 2;
+	x += 2;
+	x -= 2;
+	x *= 2;
+	x /= 2;
+	x %= 2;
+	x &= 2;
+	x |= 2;
+	x ^= 2;
 	
 	int test = a != 2;
 	int test = a == 2;

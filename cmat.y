@@ -56,7 +56,7 @@ instruction : declaration_variable ';'
 declaration_variable : type liste_variable_declaree
 ;
 
-liste_variable_declaree : liste_variable_declaree ',' variable_declaree
+liste_variable_declaree : liste_variable_declaree ',' variable_declaree | variable_declaree
 ;
 
 variable_declaree : IDENT
@@ -77,9 +77,11 @@ operation : expression
 ;
 
 declaration_fonction : type IDENT '(' liste_parametre ')' corps
+                        | type IDENT '(' ')' corps
 ;
 		 
 appel_fonction : IDENT '(' liste_argument ')'
+                | IDENT '(' ')'
 		| PRINTF '(' C_STR ')'
 		| PRINT '(' constante ')'
 		| PRINTMAT '(' IDENT ')'
@@ -128,10 +130,10 @@ expression : valeur
 intervalle_matrix : '[' liste_rangee ']' | '[' liste_rangee ']' '[' liste_rangee ']'
 ;
 
-liste_rangee : liste_rangee ';' rangee
+liste_rangee : liste_rangee ';' rangee | rangee
 ;
 
-rangee : '*' | INTERV | C_FLOAT
+rangee : '*' | INTERV | C_INT
 
 liste_dimension : liste_dimension dimension | dimension
 ;
