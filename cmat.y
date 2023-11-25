@@ -61,9 +61,8 @@ liste_variable_declaree : liste_variable_declaree ',' variable_declaree | variab
 
 variable_declaree : IDENT
                 | IDENT '=' expression
-                | IDENT '=' IDENT intervalle_matrix
-                | IDENT liste_dimension
-                | IDENT liste_dimension '=' valeur_tableau
+                | IDENT intervalle_dimention
+                | IDENT intervalle_dimention '=' valeur_tableau
 ;
 
 
@@ -73,7 +72,7 @@ liste_operation : liste_operation ',' operation
 
 operation : expression
 	| IDENT assign operation
-	| IDENT liste_dimension assign operation
+	| IDENT intervalle_dimention assign operation
 ;
 
 declaration_fonction : type IDENT '(' liste_parametre ')' corps
@@ -127,18 +126,13 @@ expression : valeur
 ;
 
        
-intervalle_matrix : '[' liste_rangee ']' | '[' liste_rangee ']' '[' liste_rangee ']'
+intervalle_dimention : intervalle_dimention '[' liste_rangee ']' | '[' liste_rangee ']'
 ;
 
 liste_rangee : liste_rangee ';' rangee | rangee
 ;
 
 rangee : '*' | INTERV | C_INT
-
-liste_dimension : liste_dimension dimension | dimension
-;
-
-dimension : '[' C_INT ']'
 ;
 
 valeur_tableau : valeur_vecteur 
@@ -167,7 +161,7 @@ incr_et_decr : IDENT INCR | IDENT DECR | INCR IDENT | DECR IDENT
 type : INT | FLOAT | MATRIX
 ;
 
-valeur : IDENT | constante | IDENT liste_dimension | IDENT intervalle_matrix
+valeur : IDENT | constante | IDENT intervalle_dimention
 ;
 
 constante : C_INT | C_FLOAT 
