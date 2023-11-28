@@ -5,11 +5,10 @@
 %option nounput
 %option noyywrap
 
-ID                  [a-zA-Z][a-zA-Z0-9]*
+ID                  [a-zA-Z_][a-zA-Z0-9_]*
 COMMENT             "//".*|\/\*[^*]*\*+(?:[^\/*][^*]*\*+)*\/
-INTERV 	            [0-9]+\.\.[0-9]+
 INT                 0|[1-9][0-9]*
-FLOAT               ([0-9]+\.|\.[0-9])[0-9]*([eE][+-]?[0-9]+)?(f|F)?
+FLOAT               ([0-9]+\.[^\.]|\.[0-9])[0-9]*([eE][+-]?[0-9]+)?(f|F)?
 STR                 \"([^\"\\]|\\.)*\"
 WHITESPACE          [ \t\n\v\f\r]+
 
@@ -49,7 +48,7 @@ print               			{return PRINT;}
 printmat            			{return PRINTMAT;}
 
 matrix              			{return MATRIX;}
-{INTERV}               		    {return INTERV;}
+".."               		        {return INTERV_OP;}
 
 {ID}                			{return IDENT;}
 {INT}               			{return C_INT;}
@@ -58,5 +57,7 @@ matrix              			{return MATRIX;}
 
 {COMMENT}           			{/*Ignore*/;}
 {WHITESPACE}        			{/*Ignore*/;}
+
+.                               {fprintf(stderr, "Lexical error, character unknown : \'%c\'\n", yytext[0]);}
 
 %%

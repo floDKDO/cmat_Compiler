@@ -12,7 +12,7 @@ int main()
 	
 	fonc(1 * 2 + 3);
 	
-	fonc(a = 2, b);
+	c = fonc(a = 2, b);
 	
 	// commentaire
 
