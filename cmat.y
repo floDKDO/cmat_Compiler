@@ -14,7 +14,7 @@ int syntaxe_error = 0;
 
 %union 
 {
-        enum u_type {INT_TYPE, FLOAT_TYPE, MATRIX_TYPE, TABLEAU_TYPE, ERROR_TYPE} type;
+        enum u_type {INT_TYPE, FLOAT_TYPE, MATRIX_TYPE, TABLEAU_TYPE, UNKNOWN_TYPE, ERROR_TYPE} type;
         struct u_tab {
                 enum u_type type_tab;
                 int nDim;
@@ -29,8 +29,8 @@ int syntaxe_error = 0;
 %token MAIN PRINTF PRINT PRINTMAT WHILE
 %token IDENT C_INT C_FLOAT C_STR
 
-%type <type> type expression constante valeur rangee liste_rangee
-%type <tableau> intervalle_dimension
+%type <type> type expression constante valeur variable_declaree
+%type <tableau> intervalle_dimension valeur_tableau liste_tableau liste_nombre rangee liste_rangee
 
 %right '=' PLUS_ASSIGN MINUS_ASSIGN MULT_ASSIGN DIV_ASSIGN MOD_ASSIGN AND_ASSIGN XOR_ASSIGN OR_ASSIGN
 %left LOGICAL_OR
@@ -100,10 +100,22 @@ declaration_variable : type liste_variable_declaree
 liste_variable_declaree : liste_variable_declaree ',' variable_declaree | variable_declaree
 ;
 
-variable_declaree : IDENT
-                | IDENT '=' expression
-                | IDENT intervalle_dimension
-                | IDENT intervalle_dimension '=' valeur_tableau
+variable_declaree : IDENT {$$ = UNKNOWN_TYPE;}
+                | IDENT '=' expression {$$ = $3;}
+                | IDENT intervalle_dimension {
+                        if ($2.type_tab != TABLEAU_TYPE) {
+                                yyerror("Mauvaise déclaration");
+                                $$ = ERROR_TYPE; 
+                        } else {
+                                $$ = TABLEAU_TYPE; //Tableau ou matrix
+                        }}
+                | IDENT intervalle_dimension '=' valeur_tableau {
+                        if ($2.nDim < $4.nDim) {
+                                yyerror("Trop de dimension déclaré");
+                                $$ = ERROR_TYPE;
+                        } else {
+                                $$ = $4.type_tab;
+                        }}
 ;
 
 
@@ -141,150 +153,228 @@ argument :  IDENT assign expression | expression
 ; 
 
 expression : valeur {$$ = $1;}
-            | expression '+' expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
-                if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+            | expression '+' expression {
+                if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {
+                        $$ = ERROR_TYPE;
+                } else if ($1 == TABLEAU_TYPE || $3 == TABLEAU_TYPE) {
+                        yyerror("+ avec un tableau");
+                        $$ = ERROR_TYPE;
+                } else if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
                         $$ = MATRIX_TYPE;
-                } else {
-                        if ($1 == FLOAT_TYPE || $3 == FLOAT_TYPE) {
-                                $$ = FLOAT_TYPE;
-                        } else {
-                                $$ = INT_TYPE;
-                        }
-                }}}
-            | expression '-' expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
-                if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+                } else if ($1 == FLOAT_TYPE || $3 == FLOAT_TYPE) {
+                        $$ = FLOAT_TYPE;
+                } else if ($1 == INT_TYPE || $3 == INT_TYPE) {
+                        $$ = INT_TYPE;
+                }}
+            | expression '-' expression {
+                if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {
+                        $$ = ERROR_TYPE;
+                } else if ($1 == TABLEAU_TYPE || $3 == TABLEAU_TYPE) {
+                        yyerror("- avec un tableau");
+                        $$ = ERROR_TYPE;
+                } else if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
                         $$ = MATRIX_TYPE;
-                } else {
-                        if ($1 == FLOAT_TYPE || $3 == FLOAT_TYPE) {
-                                $$ = FLOAT_TYPE;
-                        } else {
-                                $$ = INT_TYPE;
-                        }
-                }}}
-            | expression '*' expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
-                if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+                } else if ($1 == FLOAT_TYPE || $3 == FLOAT_TYPE) {
+                        $$ = FLOAT_TYPE;
+                } else if ($1 == INT_TYPE || $3 == INT_TYPE) {
+                        $$ = INT_TYPE;
+                }}
+            | expression '*' expression {
+                if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {
+                        $$ = ERROR_TYPE;
+                } else if ($1 == TABLEAU_TYPE || $3 == TABLEAU_TYPE) {
+                        yyerror("* avec un tableau");
+                        $$ = ERROR_TYPE;
+                } else if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
                         $$ = MATRIX_TYPE;
-                } else {
-                        if ($1 == FLOAT_TYPE || $3 == FLOAT_TYPE) {
-                                $$ = FLOAT_TYPE;
-                        } else {
-                                $$ = INT_TYPE;
-                        }
-                }}}
-            | expression '/' expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
-                if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+                } else if ($1 == FLOAT_TYPE || $3 == FLOAT_TYPE) {
+                        $$ = FLOAT_TYPE;
+                } else if ($1 == INT_TYPE || $3 == INT_TYPE) {
+                        $$ = INT_TYPE;
+                }}
+            | expression '/' expression {
+                if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {
+                        $$ = ERROR_TYPE;
+                } else if ($1 == TABLEAU_TYPE || $3 == TABLEAU_TYPE) {
+                        yyerror("/ avec un tableau");
+                        $$ = ERROR_TYPE;
+                } else if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
                         $$ = MATRIX_TYPE;
-                } else {
-                        if ($1 == FLOAT_TYPE || $3 == FLOAT_TYPE) {
-                                $$ = FLOAT_TYPE;
-                        } else {
-                                $$ = INT_TYPE;
-                        }
-                }}}
-            | expression '%' expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
-                if ($1 != INT_TYPE || $3 != INT_TYPE) {
+                } else if ($1 == FLOAT_TYPE || $3 == FLOAT_TYPE) {
+                        $$ = FLOAT_TYPE;
+                } else if ($1 == INT_TYPE || $3 == INT_TYPE) {
+                        $$ = INT_TYPE;
+                }}
+            | expression '%' expression {
+                if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {
+                        $$ = ERROR_TYPE;
+                } else if ($1 != INT_TYPE || $3 != INT_TYPE) {
                         yyerror("\% avec des non entiers"); 
                         $$ = ERROR_TYPE;
                 } else {
                         $$ = INT_TYPE;
-                }}}
-            | expression '^' expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
-                if ($1 != INT_TYPE || $3 != INT_TYPE) {
+                }}
+            | expression '^' expression {
+                if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {
+                        $$ = ERROR_TYPE;
+                } else if ($1 != INT_TYPE || $3 != INT_TYPE) {
                         yyerror("^ avec des non entiers"); 
                         $$ = ERROR_TYPE;
                 } else {
                         $$ = INT_TYPE;
-                }}}
-            | expression '&' expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
-                if ($1 != INT_TYPE || $3 != INT_TYPE) {
+                }}
+            | expression '&' expression {
+                if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {
+                        $$ = ERROR_TYPE;
+                } else if ($1 != INT_TYPE || $3 != INT_TYPE) {
                         yyerror("& avec des non entiers"); 
                         $$ = ERROR_TYPE;
                 } else {
                         $$ = INT_TYPE;
-                }}}
-            | expression '|' expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
-                if ($1 != INT_TYPE || $3 != INT_TYPE) {
+                }}
+            | expression '|' expression {
+                if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {
+                        $$ = ERROR_TYPE;
+                } else if ($1 != INT_TYPE || $3 != INT_TYPE) {
                         yyerror("| avec des non entiers"); 
                         $$ = ERROR_TYPE;
                 } else {
                         $$ = INT_TYPE;
-                }}}
-            | expression '>' expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
-                if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
-                        yyerror("< avec des matrices"); 
+                }}
+            | expression '>' expression {
+                if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {
+                        $$ = ERROR_TYPE;
+                } else if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+                        yyerror("> avec des matrices");
+                        $$ = ERROR_TYPE;
+                } else if ($1 == TABLEAU_TYPE || $3 == TABLEAU_TYPE) {
+                        yyerror("> avec des tableaux");
                         $$ = ERROR_TYPE;
                 } else {
                         $$ = INT_TYPE;
-                }}}
-            | expression '<' expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
-                if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
-                        yyerror("> avec des matrices"); 
+                }}
+            | expression '<' expression {
+                if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {
+                        $$ = ERROR_TYPE;
+                } else if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+                        yyerror("< avec des matrices");
+                        $$ = ERROR_TYPE;
+                } else if ($1 == TABLEAU_TYPE || $3 == TABLEAU_TYPE) {
+                        yyerror("< avec des tableaux");
                         $$ = ERROR_TYPE;
                 } else {
                         $$ = INT_TYPE;
-                }}}
-            | expression LE expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
-                if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
-                        yyerror("<= avec des matrices"); 
+                }}
+            | expression LE expression {
+                if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {
+                        $$ = ERROR_TYPE;
+                } else if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+                        yyerror("<= avec des matrices");
+                        $$ = ERROR_TYPE;
+                } else if ($1 == TABLEAU_TYPE || $3 == TABLEAU_TYPE) {
+                        yyerror("<= avec des tableaux");
                         $$ = ERROR_TYPE;
                 } else {
                         $$ = INT_TYPE;
-                }}}
-            | expression GE expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
-                if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
-                        yyerror(">= avec des matrices"); 
+                }}
+            | expression GE expression {
+                if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {
+                        $$ = ERROR_TYPE;
+                } else if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+                        yyerror(">= avec des matrices");
+                        $$ = ERROR_TYPE;
+                } else if ($1 == TABLEAU_TYPE || $3 == TABLEAU_TYPE) {
+                        yyerror(">= avec des tableaux");
                         $$ = ERROR_TYPE;
                 } else {
                         $$ = INT_TYPE;
-                }}}
-            | expression EQ expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
-                if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
-                        yyerror("== avec des matrices"); 
+                }}
+            | expression EQ expression {
+                if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {
+                        $$ = ERROR_TYPE;
+                } else if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+                        yyerror("== avec des matrices");
+                        $$ = ERROR_TYPE;
+                } else if ($1 == TABLEAU_TYPE || $3 == TABLEAU_TYPE) {
+                        yyerror("== avec des tableaux");
                         $$ = ERROR_TYPE;
                 } else {
                         $$ = INT_TYPE;
-                }}}
-            | expression NE expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
-                if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
-                        yyerror("!= avec des matrices"); 
+                }}
+            | expression NE expression {
+                if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {
+                        $$ = ERROR_TYPE;
+                } else if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+                        yyerror("!= avec des matrices");
+                        $$ = ERROR_TYPE;
+                } else if ($1 == TABLEAU_TYPE || $3 == TABLEAU_TYPE) {
+                        yyerror("!= avec des tableaux");
                         $$ = ERROR_TYPE;
                 } else {
                         $$ = INT_TYPE;
-                }}}
-            | expression LOGICAL_AND expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
-                        if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
-                                yyerror("&& avec des matrices"); 
-                                $$ = ERROR_TYPE;
-                        } else {
-                                $$ = INT_TYPE;
-                        }}}
-            | expression LOGICAL_OR expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
-                        if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
-                                yyerror("|| avec des matrices"); 
-                                $$ = ERROR_TYPE;
-                        } else {
-                                $$ = INT_TYPE;
-                        }}}
-            | '-' expression %prec UNARY {$$ = $2;}
-            | '+' expression %prec UNARY {$$ = $2;}
-            | '!' expression %prec UNARY {if ($2 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
-                        if ($2 == MATRIX_TYPE) {
-                                yyerror("! avec des matrix"); 
-                                $$ = ERROR_TYPE;
-                        } else {
-                                $$ = INT_TYPE;
-                        }}}
-            | '~' expression %prec UNARY {if ($2 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
-                        if ($2 == MATRIX_TYPE) {
-                                $$ = MATRIX_TYPE;
-                        } else {
-                                if ($2 == INT_TYPE) {
-                                        $$ = INT_TYPE;
-                                } else {
-                                        yyerror("~ avec des float"); 
-                                        $$ = ERROR_TYPE;
-                                }
-                        }}}
+                }}
+            | expression LOGICAL_AND expression {
+                if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {
+                        $$ = ERROR_TYPE;
+                } else if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+                        yyerror("&& avec des matrices");
+                        $$ = ERROR_TYPE;
+                } else if ($1 == TABLEAU_TYPE || $3 == TABLEAU_TYPE) {
+                        yyerror("&& avec des tableaux");
+                        $$ = ERROR_TYPE;
+                } else {
+                        $$ = INT_TYPE;
+                }}
+            | expression LOGICAL_OR expression {
+                if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {
+                        $$ = ERROR_TYPE;
+                } else if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+                        yyerror("|| avec des matrices");
+                        $$ = ERROR_TYPE;
+                } else if ($1 == TABLEAU_TYPE || $3 == TABLEAU_TYPE) {
+                        yyerror("|| avec des tableaux");
+                        $$ = ERROR_TYPE;
+                } else {
+                        $$ = INT_TYPE;
+                }}
+            | '-' expression %prec UNARY {
+                if ($2 == TABLEAU_TYPE) {
+                        yyerror("- avec un tableau");
+                        $$ = ERROR_TYPE;
+                } else {
+                        $$ = $2;
+                }}
+            | '+' expression %prec UNARY {
+                if ($2 == TABLEAU_TYPE) {
+                        yyerror("+ avec un tableau");
+                        $$ = ERROR_TYPE;
+                } else {
+                        $$ = $2;
+                }}
+            | '!' expression %prec UNARY {
+                if ($2 == ERROR_TYPE) {
+                        $$ = ERROR_TYPE;
+                } else if ($2 == MATRIX_TYPE) {
+                        yyerror("! avec une matrix");
+                        $$ = ERROR_TYPE;
+                } else if ($2 == TABLEAU_TYPE) {
+                        yyerror("! avec un tableau");
+                        $$ = ERROR_TYPE;
+                } else {
+                        $$ = INT_TYPE;
+                }}
+            | '~' expression %prec UNARY {
+                if ($2 == ERROR_TYPE) {
+                        $$ = ERROR_TYPE;
+                } else if ($2 == FLOAT_TYPE) {
+                        yyerror("~ avec un float");
+                        $$ = ERROR_TYPE;
+                } else if ($2 == TABLEAU_TYPE) {
+                        yyerror("~ avec un tableau");
+                        $$ = ERROR_TYPE;
+                } else {
+                        $$ = $2;
+                }}
             /*| '*' expression %prec UNARY    //On fait les pointeurs ?
             | '&' expression %prec UNARY*/
             | '(' expression ')' {$$ = $2;}
@@ -292,70 +382,71 @@ expression : valeur {$$ = $1;}
 
        
 intervalle_dimension : intervalle_dimension '[' liste_rangee ']' { $$.nDim = $1.nDim + 1;
-                        if ($1.type_tab == ERROR_TYPE || $3 == ERROR_TYPE) {
+                        if ($1.type_tab == ERROR_TYPE || $3.type_tab == ERROR_TYPE) {
                                 $$.type_tab = ERROR_TYPE;
-                        } else {
-                                if ($1.type_tab == MATRIX_TYPE || $3 == MATRIX_TYPE) {
-                                        if ($$.nDim > 2) {
-                                                yyerror("Matrice à plus de 2 dimensions");
-                                                $$.type_tab = ERROR_TYPE;
-                                        } else {
-                                                $$.type_tab = MATRIX_TYPE;
-                                        }
+                        } else if ($1.type_tab == MATRIX_TYPE || $3.type_tab == MATRIX_TYPE) {
+                                if ($$.nDim > 2) {
+                                        yyerror("Matrice à plus de 2 dimensions");
+                                        $$.type_tab = ERROR_TYPE;
                                 } else {
-                                        $$.type_tab = TABLEAU_TYPE;
+                                        $$.type_tab = MATRIX_TYPE; //Matrix exclusivement
                                 }
-                        }}
-                        | '[' liste_rangee ']' {$$.type_tab = $2; $$.nDim = 1;}
-;
-
-liste_rangee : liste_rangee ';' rangee {
-                if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {
-                        $$ = ERROR_TYPE;
-                } else {
-                        if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
-                                $$ = MATRIX_TYPE;
                         } else {
-                                $$ = TABLEAU_TYPE;
-                        }
-                }}
-                | rangee {$$ = $1;}
+                                $$.type_tab = TABLEAU_TYPE; //Tableau ou matrix
+                        }}
+                        | '[' liste_rangee ']' {$$.type_tab = $2.type_tab; $$.nDim = 1;}
 ;
 
-rangee : '*' {$$ = MATRIX_TYPE;} 
+liste_rangee : liste_rangee ';' rangee { $$.nDim = $1.nDim + 1;
+                if ($1.type_tab == ERROR_TYPE || $3.type_tab == ERROR_TYPE) {
+                        $$.type_tab = ERROR_TYPE;
+                } else if ($1.type_tab == MATRIX_TYPE || $3.type_tab == MATRIX_TYPE) {
+                        $$.type_tab = MATRIX_TYPE; //Matrix exclusivement
+                } else {
+                        $$.type_tab = TABLEAU_TYPE; //Tableau ou matrix
+                }}
+                | rangee {$$ = $1; $$.nDim = 1;}
+;
+
+rangee : '*' {$$.type_tab = MATRIX_TYPE; /*Matrix exclusivement*/} 
         | expression INTERV_OP expression { 
         if ($1 != INT_TYPE || $3 != INT_TYPE) {
                 yyerror("Dimension non entière");
-                $$ = ERROR_TYPE;
+                $$.type_tab = ERROR_TYPE;
         } else {
-                $$ = MATRIX_TYPE;
+                $$.type_tab = MATRIX_TYPE; //Matrix exclusivement
         }}
         | expression {if ($1 != INT_TYPE) {
                 yyerror("Dimension non entière");
-                $$ = ERROR_TYPE;
+                $$.type_tab = ERROR_TYPE;
         } else {
-                $$ = TABLEAU_TYPE;
+                $$.type_tab = TABLEAU_TYPE; //Tableau ou matrix
         }}
 ;
 
-valeur_tableau : valeur_vecteur 
-		| '{' liste_tableau '}'
+valeur_tableau : '{' liste_nombre '}' {$$ = $2; $$.nDim = 1;}
+		| '{' liste_tableau '}' {$$ = $2; $$.nDim = $2.nDim + 1;}
 ;
 		
-liste_tableau : liste_tableau ',' valeur_tableau 
-		| valeur_tableau
-;
-		
-valeur_vecteur : '{' liste_nombre '}'
+liste_tableau : liste_tableau ',' valeur_tableau {$$.nDim = ($1.nDim >= $3.nDim ? $1.nDim : $3.nDim);
+                if ($1.type_tab == ERROR_TYPE || $3.type_tab == ERROR_TYPE) {
+                        $$.type_tab = ERROR_TYPE;
+                } else if ($1.type_tab != $3.type_tab) {
+                        yyerror("Tableau de plusieurs types différents");
+                        $$.type_tab = ERROR_TYPE;
+                } else {
+                        $$.type_tab = $1.type_tab;
+                }}
+		| valeur_tableau {$$ = $1;}
 ;
 
-liste_nombre : liste_entiers | liste_flottants
+liste_nombre : liste_entiers {$$.type_tab = INT_TYPE;} | liste_flottants {$$.type_tab = FLOAT_TYPE;}
 ;
 
 liste_flottants : liste_flottants ',' C_FLOAT | C_FLOAT
 ;
 
-liste_entiers : liste_entiers ',' C_INT | C_INT
+liste_entiers : liste_entiers ',' C_INT | C_INT 
 ;
 
 incr_et_decr : IDENT INCR | IDENT DECR | INCR IDENT | DECR IDENT 
