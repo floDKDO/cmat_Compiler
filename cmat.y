@@ -5,9 +5,21 @@
 extern int yylex();
 void yyerror(const char* msg);
 
+int syntaxe_error = 0;
+
 %}
 
 %define parse.error verbose //indique le type d'erreur de syntaxe
+
+
+%union 
+{
+        enum u_type {INT_TYPE, FLOAT_TYPE, MATRIX_TYPE, TABLEAU_TYPE, ERROR_TYPE} type;
+        struct u_tab {
+                enum u_type type_tab;
+                int nDim;
+        } tableau;
+}
 
 %token INCR DECR INTERV_OP LOGICAL_AND LOGICAL_OR
 %token PLUS_ASSIGN MINUS_ASSIGN MULT_ASSIGN DIV_ASSIGN MOD_ASSIGN AND_ASSIGN XOR_ASSIGN OR_ASSIGN
@@ -16,6 +28,9 @@ void yyerror(const char* msg);
 %token IF ELSE FOR RETURN  
 %token MAIN PRINTF PRINT PRINTMAT WHILE
 %token IDENT C_INT C_FLOAT C_STR
+
+%type <type> type expression constante valeur rangee liste_rangee
+%type <tableau> intervalle_dimension
 
 %right '=' PLUS_ASSIGN MINUS_ASSIGN MULT_ASSIGN DIV_ASSIGN MOD_ASSIGN AND_ASSIGN XOR_ASSIGN OR_ASSIGN
 %left LOGICAL_OR
@@ -36,7 +51,7 @@ void yyerror(const char* msg);
 %% //grammaire temporaire
 
 //Créer une liste de declaration_fonction si on ajoute les fonction en dehors du main
-programme : main
+programme : main {return syntaxe_error;}
 ;
 
 main : INT MAIN '(' ')' corps
@@ -87,8 +102,8 @@ liste_variable_declaree : liste_variable_declaree ',' variable_declaree | variab
 
 variable_declaree : IDENT
                 | IDENT '=' expression
-                | IDENT intervalle_dimention
-                | IDENT intervalle_dimention '=' valeur_tableau
+                | IDENT intervalle_dimension
+                | IDENT intervalle_dimension '=' valeur_tableau
 ;
 
 
@@ -98,7 +113,7 @@ liste_operation : liste_operation ',' operation
 
 operation : expression
 	| IDENT assign operation
-	| IDENT intervalle_dimention assign operation
+	| IDENT intervalle_dimension assign operation
 ;
 
 declaration_fonction : type IDENT '(' liste_parametre ')' corps
@@ -125,40 +140,202 @@ parametre : type IDENT
 argument :  IDENT assign expression | expression
 ; 
 
-expression : valeur 
-            | expression '+' expression
-            | expression '-' expression
-            | expression '*' expression
-            | expression '/' expression
-            | expression '%' expression
-            | expression '^' expression
-            | expression '&' expression
-            | expression '|' expression
-            | expression '>' expression
-            | expression '<' expression
-            | expression LE expression
-            | expression GE expression
-            | expression EQ expression
-            | expression NE expression
-            | expression LOGICAL_AND expression
-            | expression LOGICAL_OR expression
-            | '-' expression %prec UNARY
-            | '+' expression %prec UNARY
-            | '!' expression %prec UNARY
-            | '~' expression %prec UNARY
-            | '*' expression %prec UNARY
-            | '&' expression %prec UNARY
-            | '(' expression ')'
+expression : valeur {$$ = $1;}
+            | expression '+' expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
+                if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+                        $$ = MATRIX_TYPE;
+                } else {
+                        if ($1 == FLOAT_TYPE || $3 == FLOAT_TYPE) {
+                                $$ = FLOAT_TYPE;
+                        } else {
+                                $$ = INT_TYPE;
+                        }
+                }}}
+            | expression '-' expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
+                if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+                        $$ = MATRIX_TYPE;
+                } else {
+                        if ($1 == FLOAT_TYPE || $3 == FLOAT_TYPE) {
+                                $$ = FLOAT_TYPE;
+                        } else {
+                                $$ = INT_TYPE;
+                        }
+                }}}
+            | expression '*' expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
+                if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+                        $$ = MATRIX_TYPE;
+                } else {
+                        if ($1 == FLOAT_TYPE || $3 == FLOAT_TYPE) {
+                                $$ = FLOAT_TYPE;
+                        } else {
+                                $$ = INT_TYPE;
+                        }
+                }}}
+            | expression '/' expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
+                if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+                        $$ = MATRIX_TYPE;
+                } else {
+                        if ($1 == FLOAT_TYPE || $3 == FLOAT_TYPE) {
+                                $$ = FLOAT_TYPE;
+                        } else {
+                                $$ = INT_TYPE;
+                        }
+                }}}
+            | expression '%' expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
+                if ($1 != INT_TYPE || $3 != INT_TYPE) {
+                        yyerror("\% avec des non entiers"); 
+                        $$ = ERROR_TYPE;
+                } else {
+                        $$ = INT_TYPE;
+                }}}
+            | expression '^' expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
+                if ($1 != INT_TYPE || $3 != INT_TYPE) {
+                        yyerror("^ avec des non entiers"); 
+                        $$ = ERROR_TYPE;
+                } else {
+                        $$ = INT_TYPE;
+                }}}
+            | expression '&' expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
+                if ($1 != INT_TYPE || $3 != INT_TYPE) {
+                        yyerror("& avec des non entiers"); 
+                        $$ = ERROR_TYPE;
+                } else {
+                        $$ = INT_TYPE;
+                }}}
+            | expression '|' expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
+                if ($1 != INT_TYPE || $3 != INT_TYPE) {
+                        yyerror("| avec des non entiers"); 
+                        $$ = ERROR_TYPE;
+                } else {
+                        $$ = INT_TYPE;
+                }}}
+            | expression '>' expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
+                if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+                        yyerror("< avec des matrices"); 
+                        $$ = ERROR_TYPE;
+                } else {
+                        $$ = INT_TYPE;
+                }}}
+            | expression '<' expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
+                if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+                        yyerror("> avec des matrices"); 
+                        $$ = ERROR_TYPE;
+                } else {
+                        $$ = INT_TYPE;
+                }}}
+            | expression LE expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
+                if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+                        yyerror("<= avec des matrices"); 
+                        $$ = ERROR_TYPE;
+                } else {
+                        $$ = INT_TYPE;
+                }}}
+            | expression GE expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
+                if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+                        yyerror(">= avec des matrices"); 
+                        $$ = ERROR_TYPE;
+                } else {
+                        $$ = INT_TYPE;
+                }}}
+            | expression EQ expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
+                if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+                        yyerror("== avec des matrices"); 
+                        $$ = ERROR_TYPE;
+                } else {
+                        $$ = INT_TYPE;
+                }}}
+            | expression NE expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
+                if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+                        yyerror("!= avec des matrices"); 
+                        $$ = ERROR_TYPE;
+                } else {
+                        $$ = INT_TYPE;
+                }}}
+            | expression LOGICAL_AND expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
+                        if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+                                yyerror("&& avec des matrices"); 
+                                $$ = ERROR_TYPE;
+                        } else {
+                                $$ = INT_TYPE;
+                        }}}
+            | expression LOGICAL_OR expression {if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
+                        if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+                                yyerror("|| avec des matrices"); 
+                                $$ = ERROR_TYPE;
+                        } else {
+                                $$ = INT_TYPE;
+                        }}}
+            | '-' expression %prec UNARY {$$ = $2;}
+            | '+' expression %prec UNARY {$$ = $2;}
+            | '!' expression %prec UNARY {if ($2 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
+                        if ($2 == MATRIX_TYPE) {
+                                yyerror("! avec des matrix"); 
+                                $$ = ERROR_TYPE;
+                        } else {
+                                $$ = INT_TYPE;
+                        }}}
+            | '~' expression %prec UNARY {if ($2 == ERROR_TYPE) {$$ = ERROR_TYPE;} else {
+                        if ($2 == MATRIX_TYPE) {
+                                $$ = MATRIX_TYPE;
+                        } else {
+                                if ($2 == INT_TYPE) {
+                                        $$ = INT_TYPE;
+                                } else {
+                                        yyerror("~ avec des float"); 
+                                        $$ = ERROR_TYPE;
+                                }
+                        }}}
+            /*| '*' expression %prec UNARY    //On fait les pointeurs ?
+            | '&' expression %prec UNARY*/
+            | '(' expression ')' {$$ = $2;}
 ;
 
        
-intervalle_dimention : intervalle_dimention '[' liste_rangee ']' | '[' liste_rangee ']'
+intervalle_dimension : intervalle_dimension '[' liste_rangee ']' { $$.nDim = $1.nDim + 1;
+                        if ($1.type_tab == ERROR_TYPE || $3 == ERROR_TYPE) {
+                                $$.type_tab = ERROR_TYPE;
+                        } else {
+                                if ($1.type_tab == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+                                        if ($$.nDim > 2) {
+                                                yyerror("Matrice à plus de 2 dimensions");
+                                                $$.type_tab = ERROR_TYPE;
+                                        } else {
+                                                $$.type_tab = MATRIX_TYPE;
+                                        }
+                                } else {
+                                        $$.type_tab = TABLEAU_TYPE;
+                                }
+                        }}
+                        | '[' liste_rangee ']' {$$.type_tab = $2; $$.nDim = 1;}
 ;
 
-liste_rangee : liste_rangee ';' rangee | rangee
+liste_rangee : liste_rangee ';' rangee {
+                if ($1 == ERROR_TYPE || $3 == ERROR_TYPE) {
+                        $$ = ERROR_TYPE;
+                } else {
+                        if ($1 == MATRIX_TYPE || $3 == MATRIX_TYPE) {
+                                $$ = MATRIX_TYPE;
+                        } else {
+                                $$ = TABLEAU_TYPE;
+                        }
+                }}
+                | rangee {$$ = $1;}
 ;
 
-rangee : '*' | expression INTERV_OP expression | expression
+rangee : '*' {$$ = MATRIX_TYPE;} 
+        | expression INTERV_OP expression { 
+        if ($1 != INT_TYPE || $3 != INT_TYPE) {
+                yyerror("Dimension non entière");
+                $$ = ERROR_TYPE;
+        } else {
+                $$ = MATRIX_TYPE;
+        }}
+        | expression {if ($1 != INT_TYPE) {
+                yyerror("Dimension non entière");
+                $$ = ERROR_TYPE;
+        } else {
+                $$ = TABLEAU_TYPE;
+        }}
 ;
 
 valeur_tableau : valeur_vecteur 
@@ -184,13 +361,17 @@ liste_entiers : liste_entiers ',' C_INT | C_INT
 incr_et_decr : IDENT INCR | IDENT DECR | INCR IDENT | DECR IDENT 
 ;
 
-type : INT | FLOAT | MATRIX
+type : INT {$$ = INT_TYPE;} | FLOAT {$$ = FLOAT_TYPE;} | MATRIX {$$ = MATRIX_TYPE;}
 ;
 
-valeur : IDENT | constante | IDENT intervalle_dimention | incr_et_decr | appel_fonction
+valeur : IDENT {$$ = INT_TYPE;} //TODO
+        | constante {$$ = $1;}
+        | IDENT intervalle_dimension {$$ = INT_TYPE;} //TODO
+        | incr_et_decr {$$ = INT_TYPE;}
+        | appel_fonction {$$ = INT_TYPE;} //TODO
 ;
 
-constante : C_INT | C_FLOAT 
+constante : C_INT {$$ = INT_TYPE;} | C_FLOAT {$$ = FLOAT_TYPE;}
 ;
 
 assign : '=' | PLUS_ASSIGN | MINUS_ASSIGN | MULT_ASSIGN | DIV_ASSIGN | MOD_ASSIGN | AND_ASSIGN | XOR_ASSIGN | OR_ASSIGN
@@ -200,5 +381,6 @@ assign : '=' | PLUS_ASSIGN | MINUS_ASSIGN | MULT_ASSIGN | DIV_ASSIGN | MOD_ASSIG
 
 void yyerror(const char* msg)
 {
-	fprintf(stderr, "%s\n", msg);
+        syntaxe_error = 1;
+	fprintf(stderr, "Syntaxe error : %s\n", msg);
 }

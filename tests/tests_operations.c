@@ -37,8 +37,9 @@ int main()
 	
 	int x = x[0..2; 2][*;*];
 	
-	int x = &x;
-	int x = *x;
+	/*
+	int x = &x; 	//On fait pas les pointeurs ?
+	int x = *x;*/
 	int x = +x;
 	int x = -x;
 	int x = !x;
