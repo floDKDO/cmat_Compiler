@@ -50,9 +50,9 @@ printmat            			{return PRINTMAT;}
 matrix              			{return MATRIX;}
 ".."               		        {return INTERV_OP;}
 
-{ID}                			{return IDENT;}
+{ID}                			{strcpy(yylval.nom, yytext); return IDENT;}
 {INT}               			{return C_INT;}
-{FLOAT}             			{return C_FLOAT;}
+{FLOAT}             			{yylval.constante=atof(yytext); return C_FLOAT;}
 {STR}               			{return C_STR;}
 
 {COMMENT}           			{/*Ignore*/;}

@@ -10,6 +10,8 @@
 //tester si la valeur de retour est NULL, si oui, appeler la fonction raler
 #define NCHK(prim) do { if ((prim) == NULL) { raler (#prim); } } while (0)
 
+#define MAX_LONGUEUR_VARIABLE 64
+
 enum type //type de l'identificateur
 {
     TYPE_NONE, //aucun type ou type inconnu
@@ -72,14 +74,16 @@ struct tds //tds = table des symboles
 	struct noeud** listes; //tableau de listes chainees => chaque entree est une liste chainee
 	int taille_max; //nb entrées max dans la tds
 	int taille_actuelle; //nb d'entrées actuellement utilisées dans la tds
+	int num_temp; //permet de nommer les variables temporaires selon le nombre qui ont été créées
 };
 
+void raler (const char *msg);
 
 int fonctionHash(char* nom, int taille_max);
 
-struct tds* creation_tds(int taille_max);
+struct tds* creation_tds(int taille_max, int taille_actuelle);
 
-struct tds* rehashing(struct tds* tds);
+void rehashing(struct tds** tds);
 
 void destruction_tds(struct tds* tds);
 
@@ -87,15 +91,26 @@ struct noeud* get_elem(struct noeud* tete, char* nom) ;
 
 struct noeud* ajout_queue(struct noeud* tete, struct noeud* new_queue);
 
-struct tds* insertion(struct tds* tds, char* nom, enum sorte sorte, enum type type);
+struct noeud* insertion(struct tds** tds, char* nom, enum sorte sorte, enum type type);
+
+struct noeud* insertion_constante(struct tds** tds, enum type type, float valeur);
+
+struct noeud* newtemp(struct tds** tds, enum type type);
+
+struct noeud* get_symbole(struct tds* tds, char* nom);
 
 bool recherche(struct tds* tds, char* nom);
+
+struct noeud* get_symbole_constante(struct tds* tds, float valeur);
+struct noeud* get_symbole_constante_int(struct tds* tds, int valeur);
 
 enum type get_type(struct tds* tds, char* nom);
 
 enum type get_sorte(struct tds* tds, char* nom);
 
 void affichage_tds(struct tds* tds);
+
+void affichage_symbole(struct noeud* noeud);
 
 
 #endif
