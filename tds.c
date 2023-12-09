@@ -227,7 +227,15 @@ struct noeud* insertion_constante(struct tds** tds, enum type type, float valeur
         noeud->info.nom = nom;
         noeud->info.sorte = SORTE_CONSTANTE;
         noeud->info.type = type;
-        noeud->info.constante.valeur = valeur;
+        
+        if(type == TYPE_INT)
+        {
+        	noeud->info.constante_entiere.valeur_entiere = valeur;
+        }
+        else if(type == TYPE_FLOAT)
+        {
+        	noeud->info.constante_flottante.valeur_flottante = valeur;
+        }
         
         (*tds)->listes[indice] = noeud;
         (*tds)->taille_actuelle += 1;
@@ -256,7 +264,15 @@ struct noeud* insertion_constante(struct tds** tds, enum type type, float valeur
             noeud->info.nom = nom;
             noeud->info.sorte = SORTE_CONSTANTE;
             noeud->info.type = type;
-            noeud->info.constante.valeur = valeur;
+            
+        if(type == TYPE_INT)
+        {
+        	noeud->info.constante_entiere.valeur_entiere = valeur;
+        }
+        else if(type == TYPE_FLOAT)
+        {
+        	noeud->info.constante_flottante.valeur_flottante = valeur;
+        }
             
             (*tds)->listes[indice] = ajout_queue((*tds)->listes[indice], noeud);
             (*tds)->taille_actuelle += 1;
@@ -286,7 +302,7 @@ struct noeud* get_symbole_constante(struct tds* tds, float valeur)
         {
             if(noeud->info.sorte == SORTE_CONSTANTE)
             {
-		    if(noeud->info.constante.valeur == valeur) //noeud trouvé
+		    if(noeud->info.type == TYPE_FLOAT && noeud->info.constante_flottante.valeur_flottante == valeur) //noeud trouvé
 		    {
 		        //printf("Entrée %d non-vide : nom %s présent\n", indice, nom);
 		        return noeud; //noeud = noeud ayant la valeur "valeur"
@@ -305,7 +321,7 @@ struct noeud* get_symbole_constante_int(struct tds* tds, int valeur)
         {
             if(noeud->info.sorte == SORTE_CONSTANTE)
             {
-		    if(noeud->info.constante.valeur == valeur) //noeud trouvé
+		    if(noeud->info.type == TYPE_INT && noeud->info.constante_entiere.valeur_entiere == valeur) //noeud trouvé
 		    {
 		        //printf("Entrée %d non-vide : nom %s présent\n", indice, nom);
 		        return noeud; //noeud = noeud ayant la valeur "valeur"
@@ -404,8 +420,6 @@ char* parser_enum_sorte(enum sorte sorte)
         return "SORTE_CONSTANTE";
     else if(sorte == SORTE_TABLEAU)
         return "SORTE_TABLEAU";
-    else if(sorte == SORTE_MATRIX)
-        return "SORTE_MATRIX";
     else return "SORTE_NONE";
 }
 
@@ -416,6 +430,10 @@ char* parser_enum_type(enum type type)
         return "INT";
     else if(type == TYPE_FLOAT)
         return "FLOAT";
+    else if(type == TYPE_MATRIX)
+    	return "MATRIX";
+    else if(type == TYPE_ERROR)
+    	return "ERROR";
     else return "NONE";
 }
 
@@ -423,7 +441,10 @@ void affichage_symbole(struct noeud* noeud)
 {
 	if(noeud->info.sorte == SORTE_CONSTANTE)
 	{
-		printf("%f", noeud->info.constante.valeur);
+		if(noeud->info.type == TYPE_INT)
+			printf("%d", noeud->info.constante_entiere.valeur_entiere);
+        	else if(noeud->info.type == TYPE_FLOAT)
+			printf("%f", noeud->info.constante_flottante.valeur_flottante);
 	}
 	else
 	{
@@ -445,7 +466,12 @@ void affichage_tds(struct tds* tds)
 	    while(temp != NULL) 
 	    {
 	    	if(temp->info.sorte == SORTE_CONSTANTE)
-	    		printf("|%s, %s, %s, %f|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type), temp->info.constante.valeur);
+	    	{
+	    		if(temp->info.type == TYPE_INT)
+	    			printf("|%s, %s, %s, %d|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type), temp->info.constante_entiere.valeur_entiere);
+        		else if(temp->info.type == TYPE_FLOAT)
+				printf("|%s, %s, %s, %f|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type), temp->info.constante_flottante.valeur_flottante);
+	    	}
 	    	else
 	        	printf("|%s, %s, %s|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type));
 	        temp = temp->suivant;

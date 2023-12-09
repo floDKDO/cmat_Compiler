@@ -51,8 +51,8 @@ matrix              			{return MATRIX;}
 ".."               		        {return INTERV_OP;}
 
 {ID}                			{strcpy(yylval.nom, yytext); return IDENT;}
-{INT}               			{return C_INT;}
-{FLOAT}             			{yylval.constante=atof(yytext); return C_FLOAT;}
+{INT}               			{yylval.constante_entiere=atoi(yytext); return C_INT;}
+{FLOAT}             			{yylval.constante_flottante=atof(yytext); return C_FLOAT;}
 {STR}               			{return C_STR;}
 
 {COMMENT}           			{/*Ignore*/;}

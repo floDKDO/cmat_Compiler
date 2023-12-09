@@ -11,12 +11,15 @@
 #define NCHK(prim) do { if ((prim) == NULL) { raler (#prim); } } while (0)
 
 #define MAX_LONGUEUR_VARIABLE 64
+#define MAX_DIMENSION_TABLEAU 2
 
 enum type //type de l'identificateur
 {
-    TYPE_NONE, //aucun type ou type inconnu
+    	TYPE_NONE, //aucun type ou type inconnu
 	TYPE_INT,
-	TYPE_FLOAT
+	TYPE_FLOAT,
+	TYPE_MATRIX,
+	TYPE_ERROR
 };
 
 //l'identificateur est quoi ?
@@ -25,8 +28,7 @@ enum sorte
     SORTE_NONE, //on se sait pas encore ce que c'est 
     SORTE_VARIABLE,
     SORTE_CONSTANTE,
-    SORTE_TABLEAU,
-    SORTE_MATRIX
+    SORTE_TABLEAU
 };
 
 
@@ -39,26 +41,29 @@ struct info //infos sur un identificateur
 	
 	//on peut avoir dans le langage soit des variables, des constantes ou des tableaux
 	//utilisation d'une union car un identificateur peut être une seule des trois sortes à la fois
-	//VARIABLE (rien de spécial), CONSTANTE (valeur de la constante), TABLEAU (NOMBRE DIM + BORNES), MATRIX (NOMBRE DIM + BORNES)
+	//VARIABLE (rien de spécial), CONSTANTE (valeur de la constante), TABLEAU (NOMBRE DIM + TAILLES DIM), MATRIX (NOMBRE DIM + TAILLES DIM)
 	union
 	{
-	    struct constante
+	    struct constante_flottante
 	    {
-	        float valeur; //pourra être casté en int
-	    } constante;
+	        float valeur_flottante; 
+	    } constante_flottante;
+	    
+	    struct constante_entiere
+	    {
+	        int valeur_entiere;
+	    } constante_entiere;
 	    
 	    struct tableau
 	    {
 	        int nombre_dimension;
-	        int borne_inf;
-	        int borne_sup;
+	        int taille_dimensions[MAX_DIMENSION_TABLEAU]; //taille de chaque dimension : ex -> int tab[2][3]; => nombre_dimension = 2, et taille_dimensions[0] = 2 et taille_dimensions[1] = 3
 	    } tableau; //tableau (hors matrix)
 	    
 	    struct matrix
 	    {
 	        int nombre_dimension;
-	        int borne_inf;
-	        int borne_sup;
+	        int taille_dimensions[2]; //une matrix peut posséder au max deux dimensions
 	    } matrix; 
 	};
 };

@@ -18,16 +18,17 @@ int indice_tab_str = 0;
 
 %union 
 {
-        /*struct u_tab {
-                enum u_type type_tab;
+        struct u_tab {
+                enum type type_tab;
                 int nDim;
-        } tableau;*/
+        } tableau;
         
         enum QuadOp op;
         
         char nom[64];
         
-        float constante;
+        float constante_flottante;
+        int constante_entiere;
         
         struct {
 		struct noeud* ptr;
@@ -51,8 +52,10 @@ int indice_tab_str = 0;
 %token <op> INCR DECR
 %type <tableau> intervalle_dimension valeur_tableau liste_tableau liste_nombre rangee liste_rangee
 %type <op> assign
-%token <constante> C_INT C_FLOAT
-%type <constante> constante
+%token <constante_entiere> C_INT 
+%token <constante_flottante> C_FLOAT
+%type <constante_entiere> constante_entiere 
+%type <constante_flottante> constante_flottante
 %type <tab_str> liste_variable_declaree
 
 %right '=' PLUS_ASSIGN MINUS_ASSIGN MULT_ASSIGN DIV_ASSIGN MOD_ASSIGN AND_ASSIGN XOR_ASSIGN OR_ASSIGN
@@ -142,11 +145,7 @@ variable_declaree : IDENT {struct noeud* entree = insertion(&tds, $1, SORTE_VARI
                   				exit(1);
                   			}
                   			
-                
-                  			
-                  			if($3.ptr->info.sorte == SORTE_CONSTANTE)
-						gencode(liste_quad, QOP_ASSIGN, $3.ptr, NULL, entree);
-					else gencode(liste_quad, QOP_ASSIGN, $3.ptr, NULL, entree);
+					gencode(liste_quad, QOP_ASSIGN, $3.ptr, NULL, entree);
 					
 					//strcpy($$, $1);
 						}
@@ -171,7 +170,8 @@ declaration_fonction : type IDENT '(' liste_parametre ')' corps
 appel_fonction : IDENT '(' liste_argument ')'
                 | IDENT '(' ')'
 		| PRINTF '(' C_STR ')'
-		| PRINT '(' constante ')'
+		| PRINT '(' constante_entiere ')'
+		| PRINT '(' constante_flottante ')'
                 | PRINT '(' IDENT ')'
 		| PRINTMAT '(' IDENT ')'
 ;
@@ -190,7 +190,12 @@ argument :  IDENT assign expression | expression
 
 expression : valeur {		struct noeud* entree;
 				if($1.ptr->info.sorte == SORTE_CONSTANTE)
-					entree = get_symbole_constante(tds, $1.ptr->info.constante.valeur); 
+				{
+					if($1.ptr->info.type == TYPE_INT)
+						entree = get_symbole_constante_int(tds, $1.ptr->info.constante_entiere.valeur_entiere);
+					else if($1.ptr->info.type == TYPE_FLOAT)
+						entree = get_symbole_constante(tds, $1.ptr->info.constante_flottante.valeur_flottante);
+				}
 				else entree = get_symbole(tds, $1.ptr->info.nom); 
 			    	if(entree == NULL) 
 				{
@@ -218,6 +223,19 @@ expression : valeur {		struct noeud* entree;
 						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_FLOAT && get_type(tds, $3.ptr->info.nom) == TYPE_FLOAT)
 						  {
 						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
+						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
+						  {
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_sorte(tds, $1.ptr->info.nom) == SORTE_TABLEAU || get_sorte(tds, $3.ptr->info.nom) == SORTE_TABLEAU)
+						  {
+						  	yyerror("+ avec des tableaux");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_MATRIX || get_sorte(tds, $3.ptr->info.nom) == TYPE_MATRIX)
+						  {
+						 	 //$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
 						  }
 						  else
 						  {
@@ -247,6 +265,19 @@ expression : valeur {		struct noeud* entree;
 						  {
 						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
 						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
+						  {
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_sorte(tds, $1.ptr->info.nom) == SORTE_TABLEAU || get_sorte(tds, $3.ptr->info.nom) == SORTE_TABLEAU)
+						  {
+						  	yyerror("- avec des tableaux");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_MATRIX || get_sorte(tds, $3.ptr->info.nom) == TYPE_MATRIX)
+						  {
+						 	 //$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
+						  }
 						  else
 						  {
 						 	$$.ptr = newtemp(&tds, TYPE_NONE);
@@ -273,6 +304,19 @@ expression : valeur {		struct noeud* entree;
 						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_FLOAT && get_type(tds, $3.ptr->info.nom) == TYPE_FLOAT)
 						  {
 						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
+						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
+						  {
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_sorte(tds, $1.ptr->info.nom) == SORTE_TABLEAU || get_sorte(tds, $3.ptr->info.nom) == SORTE_TABLEAU)
+						  {
+						  	yyerror("* avec des tableaux");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_MATRIX || get_sorte(tds, $3.ptr->info.nom) == TYPE_MATRIX)
+						  {
+						 	 //$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
 						  }
 						  else
 						  {
@@ -301,6 +345,19 @@ expression : valeur {		struct noeud* entree;
 						  {
 						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
 						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
+						  {
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_sorte(tds, $1.ptr->info.nom) == SORTE_TABLEAU || get_sorte(tds, $3.ptr->info.nom) == SORTE_TABLEAU)
+						  {
+						  	yyerror("/ avec des tableaux");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_MATRIX || get_sorte(tds, $3.ptr->info.nom) == TYPE_MATRIX)
+						  {
+						 	 //$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
+						  }
 						  else
 						  {
 						 	$$.ptr = newtemp(&tds, TYPE_NONE);
@@ -327,6 +384,15 @@ expression : valeur {		struct noeud* entree;
 						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_FLOAT && get_type(tds, $3.ptr->info.nom) == TYPE_FLOAT)
 						  {
 						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
+						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
+						  {
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_sorte(tds, $1.ptr->info.nom) != TYPE_INT || get_sorte(tds, $3.ptr->info.nom) != TYPE_INT)
+						  {
+						  	yyerror("%% avec des non-entiers");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
 						  }
 						  else
 						  {
@@ -355,6 +421,15 @@ expression : valeur {		struct noeud* entree;
 						  {
 						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
 						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
+						  {
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_sorte(tds, $1.ptr->info.nom) != TYPE_INT || get_sorte(tds, $3.ptr->info.nom) != TYPE_INT)
+						  {
+						  	yyerror("^ avec des non-entiers");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
 						  else
 						  {
 						 	$$.ptr = newtemp(&tds, TYPE_NONE);
@@ -382,6 +457,15 @@ expression : valeur {		struct noeud* entree;
 						  {
 						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
 						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
+						  {
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_sorte(tds, $1.ptr->info.nom) != TYPE_INT || get_sorte(tds, $3.ptr->info.nom) != TYPE_INT)
+						  {
+						  	yyerror("& avec des non-entiers");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
 						  else
 						  {
 						 	$$.ptr = newtemp(&tds, TYPE_NONE);
@@ -405,10 +489,15 @@ expression : valeur {		struct noeud* entree;
 						  {
 						 	 $$.ptr = newtemp(&tds, TYPE_INT);
 						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_FLOAT && get_type(tds, $3.ptr->info.nom) == TYPE_FLOAT)
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
 						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
 						  }
+						  else if(get_sorte(tds, $1.ptr->info.nom) != TYPE_INT || get_sorte(tds, $3.ptr->info.nom) != TYPE_INT)
+						  {
+						  	yyerror("| avec des non-entiers");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  } 
 						  else
 						  {
 						 	$$.ptr = newtemp(&tds, TYPE_NONE);
@@ -436,6 +525,20 @@ expression : valeur {		struct noeud* entree;
 						  {
 						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
 						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
+						  {
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_sorte(tds, $1.ptr->info.nom) == SORTE_TABLEAU || get_sorte(tds, $3.ptr->info.nom) == SORTE_TABLEAU)
+						  {
+						  	yyerror("> avec des tableaux");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_MATRIX || get_sorte(tds, $3.ptr->info.nom) == TYPE_MATRIX)
+						  {
+						  	yyerror("> avec des matrix");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
 						  else
 						  {
 						 	$$.ptr = newtemp(&tds, TYPE_NONE);
@@ -461,6 +564,20 @@ expression : valeur {		struct noeud* entree;
 						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_FLOAT && get_type(tds, $3.ptr->info.nom) == TYPE_FLOAT)
 						  {
 						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
+						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
+						  {
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_sorte(tds, $1.ptr->info.nom) == SORTE_TABLEAU || get_sorte(tds, $3.ptr->info.nom) == SORTE_TABLEAU)
+						  {
+						  	yyerror("< avec des tableaux");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_MATRIX || get_sorte(tds, $3.ptr->info.nom) == TYPE_MATRIX)
+						  {
+						  	yyerror("< avec des matrix");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
 						  }
 						  else
 						  {
@@ -489,6 +606,20 @@ expression : valeur {		struct noeud* entree;
 						  {
 						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
 						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
+						  {
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_sorte(tds, $1.ptr->info.nom) == SORTE_TABLEAU || get_sorte(tds, $3.ptr->info.nom) == SORTE_TABLEAU)
+						  {
+						  	yyerror("<= avec des tableaux");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_MATRIX || get_sorte(tds, $3.ptr->info.nom) == TYPE_MATRIX)
+						  {
+						  	yyerror("<= avec des matrix");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
 						  else
 						  {
 						 	$$.ptr = newtemp(&tds, TYPE_NONE);
@@ -515,6 +646,20 @@ expression : valeur {		struct noeud* entree;
 						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_FLOAT && get_type(tds, $3.ptr->info.nom) == TYPE_FLOAT)
 						  {
 						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
+						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
+						  {
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_sorte(tds, $1.ptr->info.nom) == SORTE_TABLEAU || get_sorte(tds, $3.ptr->info.nom) == SORTE_TABLEAU)
+						  {
+						  	yyerror(">= avec des tableaux");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_MATRIX || get_sorte(tds, $3.ptr->info.nom) == TYPE_MATRIX)
+						  {
+						  	yyerror(">= avec des matrix");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
 						  }
 						  else
 						  {
@@ -543,6 +688,20 @@ expression : valeur {		struct noeud* entree;
 						  {
 						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
 						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
+						  {
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_sorte(tds, $1.ptr->info.nom) == SORTE_TABLEAU || get_sorte(tds, $3.ptr->info.nom) == SORTE_TABLEAU)
+						  {
+						  	yyerror("== avec des tableaux");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_MATRIX || get_sorte(tds, $3.ptr->info.nom) == TYPE_MATRIX)
+						  {
+						  	yyerror("== avec des matrix");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
 						  else
 						  {
 						 	$$.ptr = newtemp(&tds, TYPE_NONE);
@@ -569,6 +728,20 @@ expression : valeur {		struct noeud* entree;
 						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_FLOAT && get_type(tds, $3.ptr->info.nom) == TYPE_FLOAT)
 						  {
 						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
+						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
+						  {
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_sorte(tds, $1.ptr->info.nom) == SORTE_TABLEAU || get_sorte(tds, $3.ptr->info.nom) == SORTE_TABLEAU)
+						  {
+						  	yyerror("!= avec des tableaux");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_MATRIX || get_sorte(tds, $3.ptr->info.nom) == TYPE_MATRIX)
+						  {
+						  	yyerror("!= avec des matrix");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
 						  }
 						  else
 						  {
@@ -597,6 +770,20 @@ expression : valeur {		struct noeud* entree;
 						  {
 						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
 						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
+						  {
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_sorte(tds, $1.ptr->info.nom) == SORTE_TABLEAU || get_sorte(tds, $3.ptr->info.nom) == SORTE_TABLEAU)
+						  {
+						  	yyerror("&& avec des tableaux");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_MATRIX || get_sorte(tds, $3.ptr->info.nom) == TYPE_MATRIX)
+						  {
+						  	yyerror("&& avec des matrix");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
 						  else
 						  {
 						 	$$.ptr = newtemp(&tds, TYPE_NONE);
@@ -615,6 +802,8 @@ expression : valeur {		struct noeud* entree;
 	    						fprintf(stderr,"Name '%s' undeclared\n", $3.ptr->info.nom);
 							exit(1);
 	    					}
+	    					
+	    					
 
 		    				  if(get_type(tds, $1.ptr->info.nom) == TYPE_INT && get_type(tds, $3.ptr->info.nom) == TYPE_INT)
 						  {
@@ -623,6 +812,20 @@ expression : valeur {		struct noeud* entree;
 						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_FLOAT && get_type(tds, $3.ptr->info.nom) == TYPE_FLOAT)
 						  {
 						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
+						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
+						  {
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_sorte(tds, $1.ptr->info.nom) == SORTE_TABLEAU || get_sorte(tds, $3.ptr->info.nom) == SORTE_TABLEAU)
+						  {
+						  	yyerror("|| avec des tableaux");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_MATRIX || get_sorte(tds, $3.ptr->info.nom) == TYPE_MATRIX)
+						  {
+						  	yyerror("|| avec des matrix");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
 						  }
 						  else
 						  {
@@ -647,6 +850,11 @@ expression : valeur {		struct noeud* entree;
 						  {
 						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
 						  }
+						  else if(get_sorte(tds, $2.ptr->info.nom) == SORTE_TABLEAU)
+						  {
+						  	yyerror("- avec un tableau");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
 						  else
 						  {
 						 	$$.ptr = newtemp(&tds, TYPE_NONE);
@@ -670,6 +878,11 @@ expression : valeur {		struct noeud* entree;
 						  {
 						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
 						  }
+						  else if(get_sorte(tds, $2.ptr->info.nom) == SORTE_TABLEAU)
+						  {
+						  	yyerror("+ avec un tableau");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
 						  else
 						  {
 						 	$$.ptr = newtemp(&tds, TYPE_NONE);
@@ -682,20 +895,35 @@ expression : valeur {		struct noeud* entree;
 	    						fprintf(stderr,"Name '%s' undeclared\n", $2.ptr->info.nom);
 							exit(1);
 	    					}
-		    					
 
-		    				  if(get_type(tds, $2.ptr->info.nom) == TYPE_INT)
+						  if(get_type(tds, $2.ptr->info.nom) == TYPE_INT)
 						  {
 						 	 $$.ptr = newtemp(&tds, TYPE_INT);
 						  }
 						  else if(get_type(tds, $2.ptr->info.nom) == TYPE_FLOAT)
 						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_sorte(tds, $2.ptr->info.nom) == SORTE_TABLEAU)
+						  {
+						  	yyerror("! avec un tableau");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_type(tds, $2.ptr->info.nom) == TYPE_MATRIX)
+						  {
+						  	yyerror("! avec une matrix");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_type(tds, $2.ptr->info.nom) == TYPE_ERROR)
+						  {
+						  	$$.ptr = newtemp(&tds, TYPE_ERROR);
 						  }
 						  else
 						  {
 						 	$$.ptr = newtemp(&tds, TYPE_NONE);
 						  }
+						  
+						  
 						  gencode(liste_quad, QOP_NOT, $2.ptr, NULL, $$.ptr);
 }
             | '~' expression %prec UNARY {
@@ -713,7 +941,17 @@ expression : valeur {		struct noeud* entree;
 						  }
 						  else if(get_type(tds, $2.ptr->info.nom) == TYPE_FLOAT)
 						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
+						  	yyerror("~ avec un float");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_sorte(tds, $2.ptr->info.nom) == SORTE_TABLEAU)
+						  {
+						  	yyerror("~ avec un tableau");
+						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
+						  }
+						  else if(get_type(tds, $2.ptr->info.nom) == TYPE_ERROR)
+						  {
+						  	$$.ptr = newtemp(&tds, TYPE_ERROR);
 						  }
 						  else
 						  {
@@ -727,31 +965,31 @@ expression : valeur {		struct noeud* entree;
 ;
 
        
-intervalle_dimension : intervalle_dimension '[' liste_rangee ']' { //$$.nDim = $1.nDim + 1;
+intervalle_dimension : intervalle_dimension '[' liste_rangee ']' { $$.nDim = $1.nDim + 1;
                         }
-                        | '[' liste_rangee ']' {/*$$.type_tab = $2.type_tab; $$.nDim = 1;*/}
+                        | '[' liste_rangee ']' {$$.type_tab = $2.type_tab; $$.nDim = 1;}
 ;
 
-liste_rangee : liste_rangee ';' rangee { //$$.nDim = $1.nDim + 1;
+liste_rangee : liste_rangee ';' rangee { $$.nDim = $1.nDim + 1;
                 }
-                | rangee {/*$$ = $1; $$.nDim = 1;*/}
+                | rangee {$$ = $1; $$.nDim = 1;}
 ;
 
-rangee : '*' {/*$$.type_tab = MATRIX_TYPE; Matrix exclusivement*/} 
+rangee : '*' {$$.type_tab = TYPE_MATRIX; /*Matrix exclusivement*/} 
         | expression INTERV_OP expression {}
         | expression {}
 ;
 
-valeur_tableau : '{' liste_nombre '}' {/*$$ = $2; $$.nDim = 1;*/}
-		| '{' liste_tableau '}' {/*$$ = $2; $$.nDim = $2.nDim + 1;*/}
+valeur_tableau : '{' liste_nombre '}' {$$ = $2; $$.nDim = 1;}
+		| '{' liste_tableau '}' {$$ = $2; $$.nDim = $2.nDim + 1;}
 ;
 		
-liste_tableau : liste_tableau ',' valeur_tableau {//$$.nDim = ($1.nDim >= $3.nDim ? $1.nDim : $3.nDim);
+liste_tableau : liste_tableau ',' valeur_tableau {$$.nDim = ($1.nDim >= $3.nDim ? $1.nDim : $3.nDim);
 }
-		| valeur_tableau {/*$$ = $1;*/}
+		| valeur_tableau {$$ = $1;}
 ;
 
-liste_nombre : liste_entiers {/*$$.type_tab = INT_TYPE;*/} | liste_flottants {/*$$.type_tab = FLOAT_TYPE;*/}
+liste_nombre : liste_entiers {$$.type_tab = TYPE_INT;} | liste_flottants {$$.type_tab = TYPE_FLOAT;}
 ;
 
 liste_flottants : liste_flottants ',' C_FLOAT | C_FLOAT
@@ -760,7 +998,7 @@ liste_flottants : liste_flottants ',' C_FLOAT | C_FLOAT
 liste_entiers : liste_entiers ',' C_INT | C_INT 
 ;
 
-type : INT {$$ = TYPE_INT;} | FLOAT {$$ = TYPE_FLOAT;} | MATRIX {/*$$ = MATRIX_TYPE;*/}
+type : INT {$$ = TYPE_INT;} | FLOAT {$$ = TYPE_FLOAT;} | MATRIX {$$ = TYPE_MATRIX;}
 ;
 
 valeur : IDENT {	struct noeud* entree = get_symbole(tds, $1); 
@@ -769,13 +1007,12 @@ valeur : IDENT {	struct noeud* entree = get_symbole(tds, $1);
 				entree = insertion(&tds, $1, SORTE_VARIABLE, TYPE_NONE);
 			}
 			$$.ptr = entree;
-}	| constante {
-        		struct noeud* entree = get_symbole_constante(tds, $1);
-        		if(entree == NULL) 
-			{
-				entree = insertion_constante(&tds, TYPE_NONE, $1);
-			}
+}	| constante_entiere {
+        		struct noeud* entree = get_symbole_constante_int(tds, $1);
 		        $$.ptr = entree;}
+	| constante_flottante {
+				struct noeud* entree = get_symbole_constante(tds, $1);	
+				$$.ptr = entree;}
         | IDENT intervalle_dimension {} 
         | incr_et_decr {struct noeud* entree = get_symbole(tds, $1.ptr->info.nom); 
 		    	if(entree == NULL) 
@@ -826,9 +1063,11 @@ incr_et_decr : IDENT INCR {	$2 = QOP_POST_INCR;
 				$$.ptr = entree;  }
 ;
 
-constante : C_INT {struct noeud* entree = insertion_constante(&tds, TYPE_INT, $1);
+constante_entiere : C_INT {struct noeud* entree = insertion_constante(&tds, TYPE_INT, $1);
                    $$ = $1;} 
-	  | C_FLOAT {struct noeud* entree = insertion_constante(&tds, TYPE_FLOAT, $1);
+;
+
+constante_flottante : C_FLOAT {struct noeud* entree = insertion_constante(&tds, TYPE_FLOAT, $1);
 		   $$ = $1;} 
 ;
 
