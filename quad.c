@@ -229,13 +229,19 @@ void affiche_quad(struct Quad* quad)
 		case QOP_NOT:
 			affichage_symbole(quad->res);
 			printf(" = ");
-			printf(" !");
+			printf("!");
 			affichage_symbole(quad->arg1);
 			break;
 		case QOP_NEG: //~
 			affichage_symbole(quad->res);
 			printf(" = ");
 			printf(" ~");
+			affichage_symbole(quad->arg1);
+			break;
+		case QOP_CAST:
+			affichage_symbole(quad->res);
+			printf(" = ");
+			printf("(float)");
 			affichage_symbole(quad->arg1);
 			break;
 		

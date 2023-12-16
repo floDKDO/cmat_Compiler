@@ -15,7 +15,7 @@
 
 enum type //type de l'identificateur
 {
-    	TYPE_NONE, //aucun type ou type inconnu
+    TYPE_NONE, //aucun type ou type inconnu
 	TYPE_INT,
 	TYPE_FLOAT,
 	TYPE_MATRIX,

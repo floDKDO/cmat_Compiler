@@ -48,7 +48,8 @@ enum QuadOp
 	QOP_OR_ASSIGN,
 	QOP_LOGICAL_AND,
 	QOP_LOGICAL_OR,
-	QOP_GOTO
+	QOP_GOTO,
+	QOP_CAST //INT to FLOAT
 };
 
 struct Quad

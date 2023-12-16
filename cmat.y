@@ -18,25 +18,25 @@ int indice_tab_str = 0;
 
 %union 
 {
-        struct u_tab {
-                enum type type_tab;
-                int nDim;
-        } tableau;
-        
-        enum QuadOp op;
-        
-        char nom[64];
-        
-        float constante_flottante;
-        int constante_entiere;
-        
-        struct {
+	struct u_tab {
+		enum type type_tab;
+		int nDim;
+	} tableau;
+	
+	enum QuadOp op;
+	
+	char nom[MAX_LENGTH_VAR_NAME];
+	
+	float constante_flottante;
+	int constante_entiere;
+	
+	struct {
 		struct noeud* ptr;
-	    } exprval;
-	    
-	 char tab_str[64][64]; //limite arbitraire : 64 chaînes de 64 caractères max
-	 
-	 enum type type;
+	} exprval;
+	
+	char tab_str[64][MAX_LENGTH_VAR_NAME]; //limite arbitraire : 64 chaînes de 64 caractères max
+	
+	enum type type;
 }
 
 %token INTERV_OP LOGICAL_AND LOGICAL_OR
@@ -96,8 +96,8 @@ liste_instruction : liste_instruction instruction
 instruction : declaration_variable ';' 
 	    | declaration_fonction
 	    | liste_operation ';'
-            | condition
-            | boucle
+        | condition
+        | boucle
 	    | RETURN C_INT ';'
 ;
 
@@ -123,39 +123,42 @@ boucle_while : WHILE '(' expression ')' corps
 ;
 
 
-declaration_variable : type liste_variable_declaree {for(int i = 0; i < indice_tab_str; i++) //mettre le type dans la tds
-							{
-								struct noeud* noeud = get_symbole(tds, $2[i]);
-								if(noeud != NULL)
-									noeud->info.type = $1;
-							}
-}
+declaration_variable : type liste_variable_declaree 
+	{
+		for(int i = 0; i < indice_tab_str; i++) { //mettre le type dans la tds
+			struct noeud* noeud = get_symbole(tds, $2[i]);
+			if(noeud != NULL)
+				noeud->info.type = $1;
+			}
+	}
 ;
 
 liste_variable_declaree : liste_variable_declaree ',' variable_declaree {strcpy($$[indice_tab_str], $3); indice_tab_str += 1;}
 			| variable_declaree {strcpy($$[indice_tab_str], $1); indice_tab_str += 1;}
 ;
 
-variable_declaree : IDENT {struct noeud* entree = insertion(&tds, $1, SORTE_VARIABLE, TYPE_NONE); /*strcpy($$, $1);*/}
-                  | IDENT '=' expression {struct noeud* entree = insertion(&tds, $1, SORTE_VARIABLE, TYPE_NONE);
-                  				
-                  			if(entree == NULL) 
-                  			{
-                  				fprintf(stderr,"Previous declaration of %s exists\n", $1); 
-                  				exit(1);
-                  			}
-                  			
-					gencode(liste_quad, QOP_ASSIGN, $3.ptr, NULL, entree);
-					
-					//strcpy($$, $1);
-						}
-                  | IDENT intervalle_dimension {}
-                  | IDENT intervalle_dimension '=' valeur_tableau {}
+variable_declaree : 
+	IDENT {struct noeud* entree = insertion(&tds, $1, SORTE_VARIABLE, TYPE_NONE); /*strcpy($$, $1);*/}
+    | IDENT '=' expression {
+			struct noeud* entree = insertion(&tds, $1, SORTE_VARIABLE, TYPE_NONE);
+            
+            if(entree == NULL) {
+                fprintf(stderr,"Previous declaration of %s exists\n", $1); 
+                exit(1);
+            }
+            
+			gencode(liste_quad, QOP_ASSIGN, $3.ptr, NULL, entree);
+			
+			//strcpy($$, $1);
+		}
+    | IDENT intervalle_dimension {}
+    | IDENT intervalle_dimension '=' valeur_tableau {}
 ;
 
 
-liste_operation : liste_operation ',' operation
-		| operation
+liste_operation : 
+	liste_operation ',' operation
+	| operation
 ;
 
 operation : expression
@@ -163,17 +166,19 @@ operation : expression
 	| IDENT intervalle_dimension assign operation
 ;
 
-declaration_fonction : type IDENT '(' liste_parametre ')' corps
-                        | type IDENT '(' ')' corps
+declaration_fonction : 
+	type IDENT '(' liste_parametre ')' corps
+    | type IDENT '(' ')' corps
 ;
 		 
-appel_fonction : IDENT '(' liste_argument ')'
-                | IDENT '(' ')'
-		| PRINTF '(' C_STR ')'
-		| PRINT '(' constante_entiere ')'
-		| PRINT '(' constante_flottante ')'
-                | PRINT '(' IDENT ')'
-		| PRINTMAT '(' IDENT ')'
+appel_fonction : 
+	IDENT '(' liste_argument ')'
+    | IDENT '(' ')'
+	| PRINTF '(' C_STR ')'
+	| PRINT '(' constante_entiere ')'
+	| PRINT '(' constante_flottante ')'
+    | PRINT '(' IDENT ')'
+	| PRINTMAT '(' IDENT ')'
 ;
             
 liste_parametre : liste_parametre ',' parametre | parametre
@@ -188,791 +193,435 @@ parametre : type IDENT
 argument :  IDENT assign expression | expression
 ; 
 
-expression : valeur {		struct noeud* entree;
-				if($1.ptr->info.sorte == SORTE_CONSTANTE)
-				{
-					if($1.ptr->info.type == TYPE_INT)
-						entree = get_symbole_constante_int(tds, $1.ptr->info.constante_entiere.valeur_entiere);
-					else if($1.ptr->info.type == TYPE_FLOAT)
-						entree = get_symbole_constante(tds, $1.ptr->info.constante_flottante.valeur_flottante);
-				}
-				else entree = get_symbole(tds, $1.ptr->info.nom); 
-			    	if(entree == NULL) 
-				{
-					fprintf(stderr,"Name '%s' undeclared\n",$1.ptr->info.nom);
-					exit(1);
-				}
-				$$.ptr = entree;
+expression : 
+	valeur {
+			struct noeud* entree;
+			if($1.ptr->info.sorte == SORTE_CONSTANTE) {
+				if($1.ptr->info.type == TYPE_INT)
+					entree = get_symbole_constante_int(tds, $1.ptr->info.constante_entiere.valeur_entiere);
+				else if($1.ptr->info.type == TYPE_FLOAT)
+					entree = get_symbole_constante(tds, $1.ptr->info.constante_flottante.valeur_flottante);
+			} else entree = get_symbole(tds, $1.ptr->info.nom);
+			
+			$$.ptr = entree;
 		}
-            | expression '+' expression {
-	    					if(recherche(tds, $1.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $1.ptr->info.nom);
-							exit(1);
-	    					}
-	    					else if(recherche(tds, $3.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $3.ptr->info.nom);
-							exit(1);
-	    					}
-
-		    				  if(get_type(tds, $1.ptr->info.nom) == TYPE_INT && get_type(tds, $3.ptr->info.nom) == TYPE_INT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_INT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_FLOAT && get_type(tds, $3.ptr->info.nom) == TYPE_FLOAT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_sorte(tds, $1.ptr->info.nom) == SORTE_TABLEAU || get_sorte(tds, $3.ptr->info.nom) == SORTE_TABLEAU)
-						  {
-						  	yyerror("+ avec des tableaux");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_MATRIX || get_sorte(tds, $3.ptr->info.nom) == TYPE_MATRIX)
-						  {
-						 	 //$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
-						  }
-						  else
-						  {
-						 	$$.ptr = newtemp(&tds, TYPE_NONE);
-						  }
-
-						  
-						  gencode(liste_quad, QOP_PLUS, $1.ptr, $3.ptr, $$.ptr);
-					  }
-            | expression '-' expression {          
-           					 if(recherche(tds, $1.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $1.ptr->info.nom);
-							exit(1);
-	    					}
-	    					else if(recherche(tds, $3.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $3.ptr->info.nom);
-							exit(1);
-	    					}
-
-		    				  if(get_type(tds, $1.ptr->info.nom) == TYPE_INT && get_type(tds, $3.ptr->info.nom) == TYPE_INT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_INT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_FLOAT && get_type(tds, $3.ptr->info.nom) == TYPE_FLOAT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_sorte(tds, $1.ptr->info.nom) == SORTE_TABLEAU || get_sorte(tds, $3.ptr->info.nom) == SORTE_TABLEAU)
-						  {
-						  	yyerror("- avec des tableaux");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_MATRIX || get_sorte(tds, $3.ptr->info.nom) == TYPE_MATRIX)
-						  {
-						 	 //$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
-						  }
-						  else
-						  {
-						 	$$.ptr = newtemp(&tds, TYPE_NONE);
-						  }
-						  gencode(liste_quad, QOP_MINUS, $1.ptr, $3.ptr, $$.ptr);
-}
-            | expression '*' expression {
-            
-            					if(recherche(tds, $1.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $1.ptr->info.nom);
-							exit(1);
-	    					}
-	    					else if(recherche(tds, $3.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $3.ptr->info.nom);
-							exit(1);
-	    					}
-
-		    				  if(get_type(tds, $1.ptr->info.nom) == TYPE_INT && get_type(tds, $3.ptr->info.nom) == TYPE_INT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_INT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_FLOAT && get_type(tds, $3.ptr->info.nom) == TYPE_FLOAT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_sorte(tds, $1.ptr->info.nom) == SORTE_TABLEAU || get_sorte(tds, $3.ptr->info.nom) == SORTE_TABLEAU)
-						  {
-						  	yyerror("* avec des tableaux");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_MATRIX || get_sorte(tds, $3.ptr->info.nom) == TYPE_MATRIX)
-						  {
-						 	 //$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
-						  }
-						  else
-						  {
-						 	$$.ptr = newtemp(&tds, TYPE_NONE);
-						  }
-						  gencode(liste_quad, QOP_MULT, $1.ptr, $3.ptr, $$.ptr);
-}
-            | expression '/' expression {
-            
-            					if(recherche(tds, $1.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $1.ptr->info.nom);
-							exit(1);
-	    					}
-	    					else if(recherche(tds, $3.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $3.ptr->info.nom);
-							exit(1);
-	    					}
-
-		    				  if(get_type(tds, $1.ptr->info.nom) == TYPE_INT && get_type(tds, $3.ptr->info.nom) == TYPE_INT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_INT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_FLOAT && get_type(tds, $3.ptr->info.nom) == TYPE_FLOAT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_sorte(tds, $1.ptr->info.nom) == SORTE_TABLEAU || get_sorte(tds, $3.ptr->info.nom) == SORTE_TABLEAU)
-						  {
-						  	yyerror("/ avec des tableaux");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_MATRIX || get_sorte(tds, $3.ptr->info.nom) == TYPE_MATRIX)
-						  {
-						 	 //$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
-						  }
-						  else
-						  {
-						 	$$.ptr = newtemp(&tds, TYPE_NONE);
-						  }
-						  gencode(liste_quad, QOP_DIV, $1.ptr, $3.ptr, $$.ptr);
-}
-            | expression '%' expression {
-				    
-				    		if(recherche(tds, $1.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $1.ptr->info.nom);
-							exit(1);
-	    					}
-	    					else if(recherche(tds, $3.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $3.ptr->info.nom);
-							exit(1);
-	    					}
-
-		    				  if(get_type(tds, $1.ptr->info.nom) == TYPE_INT && get_type(tds, $3.ptr->info.nom) == TYPE_INT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_INT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_FLOAT && get_type(tds, $3.ptr->info.nom) == TYPE_FLOAT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_sorte(tds, $1.ptr->info.nom) != TYPE_INT || get_sorte(tds, $3.ptr->info.nom) != TYPE_INT)
-						  {
-						  	yyerror("%% avec des non-entiers");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else
-						  {
-						 	$$.ptr = newtemp(&tds, TYPE_NONE);
-						  }
-						  gencode(liste_quad, QOP_MOD, $1.ptr, $3.ptr, $$.ptr);
-}
-            | expression '^' expression {
-            
-            					if(recherche(tds, $1.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $1.ptr->info.nom);
-							exit(1);
-	    					}
-	    					else if(recherche(tds, $3.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $3.ptr->info.nom);
-							exit(1);
-	    					}
-
-		    				  if(get_type(tds, $1.ptr->info.nom) == TYPE_INT && get_type(tds, $3.ptr->info.nom) == TYPE_INT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_INT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_FLOAT && get_type(tds, $3.ptr->info.nom) == TYPE_FLOAT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_sorte(tds, $1.ptr->info.nom) != TYPE_INT || get_sorte(tds, $3.ptr->info.nom) != TYPE_INT)
-						  {
-						  	yyerror("^ avec des non-entiers");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else
-						  {
-						 	$$.ptr = newtemp(&tds, TYPE_NONE);
-						  }
-						  gencode(liste_quad, QOP_XOR, $1.ptr, $3.ptr, $$.ptr);
-}
-            | expression '&' expression {
-            
-    						if(recherche(tds, $1.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $1.ptr->info.nom);
-							exit(1);
-	    					}
-	    					else if(recherche(tds, $3.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $3.ptr->info.nom);
-							exit(1);
-	    					}
-
-		    				  if(get_type(tds, $1.ptr->info.nom) == TYPE_INT && get_type(tds, $3.ptr->info.nom) == TYPE_INT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_INT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_FLOAT && get_type(tds, $3.ptr->info.nom) == TYPE_FLOAT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_sorte(tds, $1.ptr->info.nom) != TYPE_INT || get_sorte(tds, $3.ptr->info.nom) != TYPE_INT)
-						  {
-						  	yyerror("& avec des non-entiers");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else
-						  {
-						 	$$.ptr = newtemp(&tds, TYPE_NONE);
-						  }
-						  gencode(liste_quad, QOP_AND, $1.ptr, $3.ptr, $$.ptr);
-}
-            | expression '|' expression {
-            
-    						if(recherche(tds, $1.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $1.ptr->info.nom);
-							exit(1);
-	    					}
-	    					else if(recherche(tds, $3.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $3.ptr->info.nom);
-							exit(1);
-	    					}
-
-		    				  if(get_type(tds, $1.ptr->info.nom) == TYPE_INT && get_type(tds, $3.ptr->info.nom) == TYPE_INT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_INT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_sorte(tds, $1.ptr->info.nom) != TYPE_INT || get_sorte(tds, $3.ptr->info.nom) != TYPE_INT)
-						  {
-						  	yyerror("| avec des non-entiers");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  } 
-						  else
-						  {
-						 	$$.ptr = newtemp(&tds, TYPE_NONE);
-						  }
-						  gencode(liste_quad, QOP_OR, $1.ptr, $3.ptr, $$.ptr);
-}
-            | expression '>' expression {
-            
-    						if(recherche(tds, $1.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $1.ptr->info.nom);
-							exit(1);
-	    					}
-	    					else if(recherche(tds, $3.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $3.ptr->info.nom);
-							exit(1);
-	    					}
-
-		    				  if(get_type(tds, $1.ptr->info.nom) == TYPE_INT && get_type(tds, $3.ptr->info.nom) == TYPE_INT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_INT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_FLOAT && get_type(tds, $3.ptr->info.nom) == TYPE_FLOAT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_sorte(tds, $1.ptr->info.nom) == SORTE_TABLEAU || get_sorte(tds, $3.ptr->info.nom) == SORTE_TABLEAU)
-						  {
-						  	yyerror("> avec des tableaux");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_MATRIX || get_sorte(tds, $3.ptr->info.nom) == TYPE_MATRIX)
-						  {
-						  	yyerror("> avec des matrix");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else
-						  {
-						 	$$.ptr = newtemp(&tds, TYPE_NONE);
-						  }
-						  gencode(liste_quad, QOP_GT, $1.ptr, $3.ptr, $$.ptr);
-}
-            | expression '<' expression {
-    						if(recherche(tds, $1.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $1.ptr->info.nom);
-							exit(1);
-	    					}
-	    					else if(recherche(tds, $3.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $3.ptr->info.nom);
-							exit(1);
-	    					}
-
-		    				  if(get_type(tds, $1.ptr->info.nom) == TYPE_INT && get_type(tds, $3.ptr->info.nom) == TYPE_INT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_INT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_FLOAT && get_type(tds, $3.ptr->info.nom) == TYPE_FLOAT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_sorte(tds, $1.ptr->info.nom) == SORTE_TABLEAU || get_sorte(tds, $3.ptr->info.nom) == SORTE_TABLEAU)
-						  {
-						  	yyerror("< avec des tableaux");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_MATRIX || get_sorte(tds, $3.ptr->info.nom) == TYPE_MATRIX)
-						  {
-						  	yyerror("< avec des matrix");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else
-						  {
-						 	$$.ptr = newtemp(&tds, TYPE_NONE);
-						  }
-						  gencode(liste_quad, QOP_LT, $1.ptr, $3.ptr, $$.ptr);
-}
-            | expression LE expression {
-            
-    						if(recherche(tds, $1.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $1.ptr->info.nom);
-							exit(1);
-	    					}
-	    					else if(recherche(tds, $3.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $3.ptr->info.nom);
-							exit(1);
-	    					}
-
-		    				  if(get_type(tds, $1.ptr->info.nom) == TYPE_INT && get_type(tds, $3.ptr->info.nom) == TYPE_INT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_INT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_FLOAT && get_type(tds, $3.ptr->info.nom) == TYPE_FLOAT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_sorte(tds, $1.ptr->info.nom) == SORTE_TABLEAU || get_sorte(tds, $3.ptr->info.nom) == SORTE_TABLEAU)
-						  {
-						  	yyerror("<= avec des tableaux");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_MATRIX || get_sorte(tds, $3.ptr->info.nom) == TYPE_MATRIX)
-						  {
-						  	yyerror("<= avec des matrix");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else
-						  {
-						 	$$.ptr = newtemp(&tds, TYPE_NONE);
-						  }
-						  gencode(liste_quad, QOP_LE, $1.ptr, $3.ptr, $$.ptr);
-}
-            | expression GE expression {
-            
-    						if(recherche(tds, $1.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $1.ptr->info.nom);
-							exit(1);
-	    					}
-	    					else if(recherche(tds, $3.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $3.ptr->info.nom);
-							exit(1);
-	    					}
-
-		    				  if(get_type(tds, $1.ptr->info.nom) == TYPE_INT && get_type(tds, $3.ptr->info.nom) == TYPE_INT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_INT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_FLOAT && get_type(tds, $3.ptr->info.nom) == TYPE_FLOAT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_sorte(tds, $1.ptr->info.nom) == SORTE_TABLEAU || get_sorte(tds, $3.ptr->info.nom) == SORTE_TABLEAU)
-						  {
-						  	yyerror(">= avec des tableaux");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_MATRIX || get_sorte(tds, $3.ptr->info.nom) == TYPE_MATRIX)
-						  {
-						  	yyerror(">= avec des matrix");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else
-						  {
-						 	$$.ptr = newtemp(&tds, TYPE_NONE);
-						  }
-						  gencode(liste_quad, QOP_GE, $1.ptr, $3.ptr, $$.ptr);
-}
-            | expression EQ expression {
-            
-    						if(recherche(tds, $1.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $1.ptr->info.nom);
-							exit(1);
-	    					}
-	    					else if(recherche(tds, $3.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $3.ptr->info.nom);
-							exit(1);
-	    					}
-
-		    				  if(get_type(tds, $1.ptr->info.nom) == TYPE_INT && get_type(tds, $3.ptr->info.nom) == TYPE_INT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_INT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_FLOAT && get_type(tds, $3.ptr->info.nom) == TYPE_FLOAT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_sorte(tds, $1.ptr->info.nom) == SORTE_TABLEAU || get_sorte(tds, $3.ptr->info.nom) == SORTE_TABLEAU)
-						  {
-						  	yyerror("== avec des tableaux");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_MATRIX || get_sorte(tds, $3.ptr->info.nom) == TYPE_MATRIX)
-						  {
-						  	yyerror("== avec des matrix");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else
-						  {
-						 	$$.ptr = newtemp(&tds, TYPE_NONE);
-						  }
-						  gencode(liste_quad, QOP_EQ, $1.ptr, $3.ptr, $$.ptr);
-}
-            | expression NE expression {
-            
-    						if(recherche(tds, $1.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $1.ptr->info.nom);
-							exit(1);
-	    					}
-	    					else if(recherche(tds, $3.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $3.ptr->info.nom);
-							exit(1);
-	    					}
-
-		    				  if(get_type(tds, $1.ptr->info.nom) == TYPE_INT && get_type(tds, $3.ptr->info.nom) == TYPE_INT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_INT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_FLOAT && get_type(tds, $3.ptr->info.nom) == TYPE_FLOAT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_sorte(tds, $1.ptr->info.nom) == SORTE_TABLEAU || get_sorte(tds, $3.ptr->info.nom) == SORTE_TABLEAU)
-						  {
-						  	yyerror("!= avec des tableaux");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_MATRIX || get_sorte(tds, $3.ptr->info.nom) == TYPE_MATRIX)
-						  {
-						  	yyerror("!= avec des matrix");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else
-						  {
-						 	$$.ptr = newtemp(&tds, TYPE_NONE);
-						  }
-						  gencode(liste_quad, QOP_NE, $1.ptr, $3.ptr, $$.ptr);
-}
-            | expression LOGICAL_AND expression {
-            
-            					if(recherche(tds, $1.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $1.ptr->info.nom);
-							exit(1);
-	    					}
-	    					else if(recherche(tds, $3.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $3.ptr->info.nom);
-							exit(1);
-	    					}
-
-		    				  if(get_type(tds, $1.ptr->info.nom) == TYPE_INT && get_type(tds, $3.ptr->info.nom) == TYPE_INT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_INT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_FLOAT && get_type(tds, $3.ptr->info.nom) == TYPE_FLOAT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_sorte(tds, $1.ptr->info.nom) == SORTE_TABLEAU || get_sorte(tds, $3.ptr->info.nom) == SORTE_TABLEAU)
-						  {
-						  	yyerror("&& avec des tableaux");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_MATRIX || get_sorte(tds, $3.ptr->info.nom) == TYPE_MATRIX)
-						  {
-						  	yyerror("&& avec des matrix");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else
-						  {
-						 	$$.ptr = newtemp(&tds, TYPE_NONE);
-						  }
-						  gencode(liste_quad, QOP_LOGICAL_AND, $1.ptr, $3.ptr, $$.ptr);
-}
-            | expression LOGICAL_OR expression {
-            
-    						if(recherche(tds, $1.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $1.ptr->info.nom);
-							exit(1);
-	    					}
-	    					else if(recherche(tds, $3.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $3.ptr->info.nom);
-							exit(1);
-	    					}
-	    					
-	    					
-
-		    				  if(get_type(tds, $1.ptr->info.nom) == TYPE_INT && get_type(tds, $3.ptr->info.nom) == TYPE_INT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_INT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_FLOAT && get_type(tds, $3.ptr->info.nom) == TYPE_FLOAT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_ERROR || get_type(tds, $3.ptr->info.nom) == TYPE_ERROR)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_sorte(tds, $1.ptr->info.nom) == SORTE_TABLEAU || get_sorte(tds, $3.ptr->info.nom) == SORTE_TABLEAU)
-						  {
-						  	yyerror("|| avec des tableaux");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_type(tds, $1.ptr->info.nom) == TYPE_MATRIX || get_sorte(tds, $3.ptr->info.nom) == TYPE_MATRIX)
-						  {
-						  	yyerror("|| avec des matrix");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else
-						  {
-						 	$$.ptr = newtemp(&tds, TYPE_NONE);
-						  }
-						  gencode(liste_quad, QOP_LOGICAL_OR, $1.ptr, $3.ptr, $$.ptr);
-}
-            | '-' expression %prec UNARY {
-            
-            					if(recherche(tds, $2.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $2.ptr->info.nom);
-							exit(1);
-	    					}
-		    					
-
-		    				  if(get_type(tds, $2.ptr->info.nom) == TYPE_INT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_INT);
-						  }
-						  else if(get_type(tds, $2.ptr->info.nom) == TYPE_FLOAT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
-						  }
-						  else if(get_sorte(tds, $2.ptr->info.nom) == SORTE_TABLEAU)
-						  {
-						  	yyerror("- avec un tableau");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else
-						  {
-						 	$$.ptr = newtemp(&tds, TYPE_NONE);
-						  }
-						  gencode(liste_quad, QOP_UNARY_MINUS, $2.ptr, NULL, $$.ptr);
-}
-            | '+' expression %prec UNARY {
-            
-            					if(recherche(tds, $2.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $2.ptr->info.nom);
-							exit(1);
-	    					}
-		    					
-
-		    				  if(get_type(tds, $2.ptr->info.nom) == TYPE_INT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_INT);
-						  }
-						  else if(get_type(tds, $2.ptr->info.nom) == TYPE_FLOAT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_FLOAT);
-						  }
-						  else if(get_sorte(tds, $2.ptr->info.nom) == SORTE_TABLEAU)
-						  {
-						  	yyerror("+ avec un tableau");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else
-						  {
-						 	$$.ptr = newtemp(&tds, TYPE_NONE);
-						  }
-						  gencode(liste_quad, QOP_UNARY_PLUS, $2.ptr, NULL, $$.ptr);
-}
-            | '!' expression %prec UNARY {
-            					if(recherche(tds, $2.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $2.ptr->info.nom);
-							exit(1);
-	    					}
-
-						  if(get_type(tds, $2.ptr->info.nom) == TYPE_INT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_INT);
-						  }
-						  else if(get_type(tds, $2.ptr->info.nom) == TYPE_FLOAT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_sorte(tds, $2.ptr->info.nom) == SORTE_TABLEAU)
-						  {
-						  	yyerror("! avec un tableau");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_type(tds, $2.ptr->info.nom) == TYPE_MATRIX)
-						  {
-						  	yyerror("! avec une matrix");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_type(tds, $2.ptr->info.nom) == TYPE_ERROR)
-						  {
-						  	$$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else
-						  {
-						 	$$.ptr = newtemp(&tds, TYPE_NONE);
-						  }
-						  
-						  
-						  gencode(liste_quad, QOP_NOT, $2.ptr, NULL, $$.ptr);
-}
-            | '~' expression %prec UNARY {
-            
-            					if(recherche(tds, $2.ptr->info.nom) == false)
-	    					{
-	    						fprintf(stderr,"Name '%s' undeclared\n", $2.ptr->info.nom);
-							exit(1);
-	    					}
-		    					
-
-		    				  if(get_type(tds, $2.ptr->info.nom) == TYPE_INT)
-						  {
-						 	 $$.ptr = newtemp(&tds, TYPE_INT);
-						  }
-						  else if(get_type(tds, $2.ptr->info.nom) == TYPE_FLOAT)
-						  {
-						  	yyerror("~ avec un float");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_sorte(tds, $2.ptr->info.nom) == SORTE_TABLEAU)
-						  {
-						  	yyerror("~ avec un tableau");
-						 	 $$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else if(get_type(tds, $2.ptr->info.nom) == TYPE_ERROR)
-						  {
-						  	$$.ptr = newtemp(&tds, TYPE_ERROR);
-						  }
-						  else
-						  {
-						 	$$.ptr = newtemp(&tds, TYPE_NONE);
-						  }
-						  gencode(liste_quad, QOP_NEG, $2.ptr, NULL, $$.ptr);
-}
-            /*| '*' expression %prec UNARY    //On fait les pointeurs ?
-            | '&' expression %prec UNARY*/
-            | '(' expression ')' {$$ = $2;}
+	| expression '+' expression {
+			if($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR) {
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if(($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.type != TYPE_MATRIX) || ($3.ptr->info.sorte == SORTE_TABLEAU && $3.ptr->info.type != TYPE_MATRIX)) {
+				yyerror("+ avec des tableaux");
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($1.ptr->info.type == TYPE_MATRIX) {
+				//$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
+			} else if($3.ptr->info.type == TYPE_MATRIX) {
+				//$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
+			} else if($1.ptr->info.type == TYPE_FLOAT) {
+				$$.ptr = newtemp(&tds, TYPE_FLOAT);
+				if ($3.ptr->info.type == TYPE_INT) {
+					struct noeud *tmp = newtemp(&tds, TYPE_FLOAT);
+					gencode(liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+					gencode(liste_quad, QOP_PLUS, $1.ptr, tmp, $$.ptr);
+				} else {
+					gencode(liste_quad, QOP_PLUS, $1.ptr, $3.ptr, $$.ptr);
+				}
+			} else if ($3.ptr->info.type == TYPE_FLOAT){
+				struct noeud *tmp = newtemp(&tds, TYPE_FLOAT);
+				gencode(liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+				$$.ptr = newtemp(&tds, TYPE_FLOAT);
+				gencode(liste_quad, QOP_PLUS, $1.ptr, tmp, $$.ptr);
+			} else if($1.ptr->info.type == TYPE_INT && $3.ptr->info.type == TYPE_INT) {
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				gencode(liste_quad, QOP_PLUS, $1.ptr, $3.ptr, $$.ptr);
+			} else {
+				$$.ptr = newtemp(&tds, TYPE_NONE);
+			}
+		}
+	| expression '-' expression {          
+			if($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR) {
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if(($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.type != TYPE_MATRIX) || ($3.ptr->info.sorte == SORTE_TABLEAU && $3.ptr->info.type != TYPE_MATRIX)) {
+				yyerror("- avec des tableaux");
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($1.ptr->info.type == TYPE_MATRIX) {
+				//$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
+			} else if($3.ptr->info.type == TYPE_MATRIX) {
+				//$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
+			} else if($1.ptr->info.type == TYPE_FLOAT) {
+				$$.ptr = newtemp(&tds, TYPE_FLOAT);
+				if ($3.ptr->info.type == TYPE_INT) {
+					struct noeud *tmp = newtemp(&tds, TYPE_FLOAT);
+					gencode(liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+					gencode(liste_quad, QOP_MINUS, $1.ptr, tmp, $$.ptr);
+				} else {
+					gencode(liste_quad, QOP_MINUS, $1.ptr, $3.ptr, $$.ptr);
+				}
+			} else if ($3.ptr->info.type == TYPE_FLOAT){
+				struct noeud *tmp = newtemp(&tds, TYPE_FLOAT);
+				gencode(liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+				$$.ptr = newtemp(&tds, TYPE_FLOAT);
+				gencode(liste_quad, QOP_MINUS, $1.ptr, tmp, $$.ptr);
+			} else if($1.ptr->info.type == TYPE_INT && $3.ptr->info.type == TYPE_INT) {
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				gencode(liste_quad, QOP_MINUS, $1.ptr, $3.ptr, $$.ptr);
+			} else {
+				$$.ptr = newtemp(&tds, TYPE_NONE);
+			}
+		}
+    | expression '*' expression {
+			if($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR) {
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if(($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.type != TYPE_MATRIX) || ($3.ptr->info.sorte == SORTE_TABLEAU && $3.ptr->info.type != TYPE_MATRIX)) {
+				yyerror("* avec des tableaux");
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($1.ptr->info.type == TYPE_MATRIX) {
+				//$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
+			} else if($3.ptr->info.type == TYPE_MATRIX) {
+				//$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
+			} else if($1.ptr->info.type == TYPE_FLOAT) {
+				$$.ptr = newtemp(&tds, TYPE_FLOAT);
+				if ($3.ptr->info.type == TYPE_INT) {
+					struct noeud *tmp = newtemp(&tds, TYPE_FLOAT);
+					gencode(liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+					gencode(liste_quad, QOP_MULT, $1.ptr, tmp, $$.ptr);
+				} else {
+					gencode(liste_quad, QOP_MULT, $1.ptr, $3.ptr, $$.ptr);
+				}
+			} else if ($3.ptr->info.type == TYPE_FLOAT){
+				struct noeud *tmp = newtemp(&tds, TYPE_FLOAT);
+				gencode(liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+				$$.ptr = newtemp(&tds, TYPE_FLOAT);
+				gencode(liste_quad, QOP_MULT, $1.ptr, tmp, $$.ptr);
+			} else if($1.ptr->info.type == TYPE_INT && $3.ptr->info.type == TYPE_INT) {
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				gencode(liste_quad, QOP_MULT, $1.ptr, $3.ptr, $$.ptr);
+			} else {
+				$$.ptr = newtemp(&tds, TYPE_NONE);
+			}
+		}
+    | expression '/' expression {
+			if($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR) {
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if(($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.type != TYPE_MATRIX) || ($3.ptr->info.sorte == SORTE_TABLEAU && $3.ptr->info.type != TYPE_MATRIX)) {
+				yyerror("/ avec des tableaux");
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($1.ptr->info.type == TYPE_MATRIX) {
+				//$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
+			} else if($3.ptr->info.type == TYPE_MATRIX) {
+				//$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
+			} else if($1.ptr->info.type == TYPE_FLOAT) {
+				$$.ptr = newtemp(&tds, TYPE_FLOAT);
+				if ($3.ptr->info.type == TYPE_INT) {
+					struct noeud *tmp = newtemp(&tds, TYPE_FLOAT);
+					gencode(liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+					gencode(liste_quad, QOP_DIV, $1.ptr, tmp, $$.ptr);
+				} else {
+					gencode(liste_quad, QOP_DIV, $1.ptr, $3.ptr, $$.ptr);
+				}
+			} else if ($3.ptr->info.type == TYPE_FLOAT){
+				struct noeud *tmp = newtemp(&tds, TYPE_FLOAT);
+				gencode(liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+				$$.ptr = newtemp(&tds, TYPE_FLOAT);
+				gencode(liste_quad, QOP_DIV, $1.ptr, tmp, $$.ptr);
+			} else if($1.ptr->info.type == TYPE_INT && $3.ptr->info.type == TYPE_INT) {
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				gencode(liste_quad, QOP_DIV, $1.ptr, $3.ptr, $$.ptr);
+			} else {
+				$$.ptr = newtemp(&tds, TYPE_NONE);
+			}
+		}
+    | expression '%' expression {
+			if($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR) {
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($1.ptr->info.type != TYPE_INT || $1.ptr->info.sorte == SORTE_TABLEAU || $3.ptr->info.type != TYPE_INT || $3.ptr->info.sorte == SORTE_TABLEAU) {
+				yyerror("\% avec des non entiers");
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else {
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				gencode(liste_quad, QOP_MOD, $1.ptr, $3.ptr, $$.ptr);
+			}
+		}
+    | expression '^' expression {
+			if($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR) {
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($1.ptr->info.type != TYPE_INT || $1.ptr->info.sorte == SORTE_TABLEAU || $3.ptr->info.type != TYPE_INT || $3.ptr->info.sorte == SORTE_TABLEAU) {
+				yyerror("^ avec des non entiers");
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else {
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				gencode(liste_quad, QOP_XOR, $1.ptr, $3.ptr, $$.ptr);
+			}
+		}
+    | expression '&' expression {
+			if($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR) {
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($1.ptr->info.type != TYPE_INT || $1.ptr->info.sorte == SORTE_TABLEAU || $3.ptr->info.type != TYPE_INT || $3.ptr->info.sorte == SORTE_TABLEAU) {
+				yyerror("& avec des non entiers");
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else {
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				gencode(liste_quad, QOP_AND, $1.ptr, $3.ptr, $$.ptr);
+			}
+		}
+    | expression '|' expression {
+			if($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR) {
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($1.ptr->info.type != TYPE_INT || $1.ptr->info.sorte == SORTE_TABLEAU || $3.ptr->info.type != TYPE_INT || $3.ptr->info.sorte == SORTE_TABLEAU) {
+				yyerror("| avec des non entiers");
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else {
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				gencode(liste_quad, QOP_OR, $1.ptr, $3.ptr, $$.ptr);
+			}
+		}
+    | expression '>' expression {
+			if($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR) {
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($1.ptr->info.sorte == SORTE_TABLEAU || $3.ptr->info.sorte == SORTE_TABLEAU) {
+				yyerror("> avec des tableaux/matrices");
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($1.ptr->info.type == TYPE_FLOAT) {
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				if ($3.ptr->info.type == TYPE_INT) {
+					struct noeud *tmp = newtemp(&tds, TYPE_FLOAT);
+					gencode(liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+					gencode(liste_quad, QOP_GT, $1.ptr, tmp, $$.ptr);
+				} else {
+					gencode(liste_quad, QOP_GT, $1.ptr, $3.ptr, $$.ptr);
+				}
+			} else if ($3.ptr->info.type == TYPE_FLOAT){
+				struct noeud *tmp = newtemp(&tds, TYPE_FLOAT);
+				gencode(liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				gencode(liste_quad, QOP_GT, $1.ptr, tmp, $$.ptr);
+			} else if($1.ptr->info.type == TYPE_INT && $3.ptr->info.type == TYPE_INT) {
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				gencode(liste_quad, QOP_GT, $1.ptr, $3.ptr, $$.ptr);
+			} else {
+				$$.ptr = newtemp(&tds, TYPE_NONE);
+			}
+		}
+    | expression '<' expression {
+			if($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR) {
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($1.ptr->info.sorte == SORTE_TABLEAU || $3.ptr->info.sorte == SORTE_TABLEAU) {
+				yyerror("< avec des tableaux/matrices");
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($1.ptr->info.type == TYPE_FLOAT) {
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				if ($3.ptr->info.type == TYPE_INT) {
+					struct noeud *tmp = newtemp(&tds, TYPE_FLOAT);
+					gencode(liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+					gencode(liste_quad, QOP_LT, $1.ptr, tmp, $$.ptr);
+				} else {
+					gencode(liste_quad, QOP_LT, $1.ptr, $3.ptr, $$.ptr);
+				}
+			} else if ($3.ptr->info.type == TYPE_FLOAT){
+				struct noeud *tmp = newtemp(&tds, TYPE_FLOAT);
+				gencode(liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+				$$.ptr = newtemp(&tds, TYPE_FLOAT);
+				gencode(liste_quad, QOP_LT, $1.ptr, tmp, $$.ptr);
+			} else if($1.ptr->info.type == TYPE_INT && $3.ptr->info.type == TYPE_INT) {
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				gencode(liste_quad, QOP_LT, $1.ptr, $3.ptr, $$.ptr);
+			} else {
+				$$.ptr = newtemp(&tds, TYPE_NONE);
+			}
+		}
+    | expression LE expression {
+			if($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR) {
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($1.ptr->info.sorte == SORTE_TABLEAU || $3.ptr->info.sorte == SORTE_TABLEAU) {
+				yyerror("<= avec des tableaux/matrices");
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($1.ptr->info.type == TYPE_FLOAT) {
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				if ($3.ptr->info.type == TYPE_INT) {
+					struct noeud *tmp = newtemp(&tds, TYPE_FLOAT);
+					gencode(liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+					gencode(liste_quad, QOP_LE, $1.ptr, tmp, $$.ptr);
+				} else {
+					gencode(liste_quad, QOP_LE, $1.ptr, $3.ptr, $$.ptr);
+				}
+			} else if ($3.ptr->info.type == TYPE_FLOAT){
+				struct noeud *tmp = newtemp(&tds, TYPE_FLOAT);
+				gencode(liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+				$$.ptr = newtemp(&tds, TYPE_FLOAT);
+				gencode(liste_quad, QOP_LE, $1.ptr, tmp, $$.ptr);
+			} else if($1.ptr->info.type == TYPE_INT && $3.ptr->info.type == TYPE_INT) {
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				gencode(liste_quad, QOP_LE, $1.ptr, $3.ptr, $$.ptr);
+			} else {
+				$$.ptr = newtemp(&tds, TYPE_NONE);
+			}
+		}
+    | expression GE expression {
+			if($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR) {
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($1.ptr->info.sorte == SORTE_TABLEAU || $3.ptr->info.sorte == SORTE_TABLEAU) {
+				yyerror(">= avec des tableaux/matrices");
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($1.ptr->info.type == TYPE_FLOAT) {
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				if ($3.ptr->info.type == TYPE_INT) {
+					struct noeud *tmp = newtemp(&tds, TYPE_FLOAT);
+					gencode(liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+					gencode(liste_quad, QOP_GE, $1.ptr, tmp, $$.ptr);
+				} else {
+					gencode(liste_quad, QOP_GE, $1.ptr, $3.ptr, $$.ptr);
+				}
+			} else if ($3.ptr->info.type == TYPE_FLOAT){
+				struct noeud *tmp = newtemp(&tds, TYPE_FLOAT);
+				gencode(liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+				$$.ptr = newtemp(&tds, TYPE_FLOAT);
+				gencode(liste_quad, QOP_GE, $1.ptr, tmp, $$.ptr);
+			} else if($1.ptr->info.type == TYPE_INT && $3.ptr->info.type == TYPE_INT) {
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				gencode(liste_quad, QOP_GE, $1.ptr, $3.ptr, $$.ptr);
+			} else {
+				$$.ptr = newtemp(&tds, TYPE_NONE);
+			}
+		}
+    | expression EQ expression {
+			if($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR) {
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($1.ptr->info.sorte == SORTE_TABLEAU || $3.ptr->info.sorte == SORTE_TABLEAU) {
+				yyerror("== avec des tableaux/matrices");
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($1.ptr->info.type == TYPE_FLOAT) {
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				if ($3.ptr->info.type == TYPE_INT) {
+					struct noeud *tmp = newtemp(&tds, TYPE_FLOAT);
+					gencode(liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+					gencode(liste_quad, QOP_EQ, $1.ptr, tmp, $$.ptr);
+				} else {
+					gencode(liste_quad, QOP_EQ, $1.ptr, $3.ptr, $$.ptr);
+				}
+			} else if ($3.ptr->info.type == TYPE_FLOAT){
+				struct noeud *tmp = newtemp(&tds, TYPE_FLOAT);
+				gencode(liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+				$$.ptr = newtemp(&tds, TYPE_FLOAT);
+				gencode(liste_quad, QOP_EQ, $1.ptr, tmp, $$.ptr);
+			} else if($1.ptr->info.type == TYPE_INT && $3.ptr->info.type == TYPE_INT) {
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				gencode(liste_quad, QOP_EQ, $1.ptr, $3.ptr, $$.ptr);
+			} else {
+				$$.ptr = newtemp(&tds, TYPE_NONE);
+			}
+		}
+    | expression NE expression {
+			if($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR) {
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($1.ptr->info.sorte == SORTE_TABLEAU || $3.ptr->info.sorte == SORTE_TABLEAU) {
+				yyerror("!= avec des tableaux/matrices");
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($1.ptr->info.type == TYPE_FLOAT) {
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				if ($3.ptr->info.type == TYPE_INT) {
+					struct noeud *tmp = newtemp(&tds, TYPE_FLOAT);
+					gencode(liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+					gencode(liste_quad, QOP_NE, $1.ptr, tmp, $$.ptr);
+				} else {
+					gencode(liste_quad, QOP_NE, $1.ptr, $3.ptr, $$.ptr);
+				}
+			} else if ($3.ptr->info.type == TYPE_FLOAT){
+				struct noeud *tmp = newtemp(&tds, TYPE_FLOAT);
+				gencode(liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+				$$.ptr = newtemp(&tds, TYPE_FLOAT);
+				gencode(liste_quad, QOP_NE, $1.ptr, tmp, $$.ptr);
+			} else if($1.ptr->info.type == TYPE_INT && $3.ptr->info.type == TYPE_INT) {
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				gencode(liste_quad, QOP_NE, $1.ptr, $3.ptr, $$.ptr);
+			} else {
+				$$.ptr = newtemp(&tds, TYPE_NONE);
+			}
+		}
+    | expression LOGICAL_AND expression { //à revoir parce que le AND n'existe pas en MIPS
+			if($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR) {
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($1.ptr->info.type != TYPE_INT || $1.ptr->info.sorte == SORTE_TABLEAU || $3.ptr->info.type != TYPE_INT || $3.ptr->info.sorte == SORTE_TABLEAU) {
+				yyerror("&& avec des non entiers");
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else {
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				gencode(liste_quad, QOP_AND, $1.ptr, $3.ptr, $$.ptr);
+			}
+		}
+	| expression LOGICAL_OR expression {//à revoir parce que le OR n'existe pas en MIPS
+			if($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR) {
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($1.ptr->info.type != TYPE_INT || $1.ptr->info.sorte == SORTE_TABLEAU || $3.ptr->info.type != TYPE_INT || $3.ptr->info.sorte == SORTE_TABLEAU) {
+				yyerror("|| avec des non entiers");
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else {
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				gencode(liste_quad, QOP_OR, $1.ptr, $3.ptr, $$.ptr);
+			}
+		}
+    | '-' expression %prec UNARY {
+			if($2.ptr->info.type == TYPE_ERROR) {
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($2.ptr->info.sorte == SORTE_TABLEAU && $2.ptr->info.type != TYPE_MATRIX) {
+				yyerror("- avec un tableau");
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($2.ptr->info.type == TYPE_MATRIX) {
+				//$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
+			} else if($2.ptr->info.type == TYPE_FLOAT) {
+				$$.ptr = newtemp(&tds, TYPE_FLOAT);
+				gencode(liste_quad, QOP_UNARY_MINUS, $2.ptr, NULL, $$.ptr);
+			} else if($2.ptr->info.type == TYPE_INT) {
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				gencode(liste_quad, QOP_UNARY_MINUS, $2.ptr, NULL, $$.ptr);
+			} else {
+				$$.ptr = newtemp(&tds, TYPE_NONE);
+			}
+		}
+    | '+' expression %prec UNARY {
+			$$ = $2;
+		}
+    | '!' expression %prec UNARY {
+			if($2.ptr->info.type == TYPE_ERROR) {
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($2.ptr->info.sorte == SORTE_TABLEAU) {
+				yyerror("! avec un tableau/une matrice");
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($2.ptr->info.type == TYPE_FLOAT || $2.ptr->info.type == TYPE_INT) {
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				gencode(liste_quad, QOP_NOT, $2.ptr, NULL, $$.ptr);
+			} else {
+				$$.ptr = newtemp(&tds, TYPE_NONE);
+			}
+		}
+    | '~' expression %prec UNARY {
+			if($2.ptr->info.type == TYPE_ERROR) {
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($2.ptr->info.sorte == SORTE_TABLEAU && $2.ptr->info.type != TYPE_MATRIX) {
+				yyerror("~ avec un tableau");
+				$$.ptr = newtemp(&tds, TYPE_ERROR);
+			} else if($2.ptr->info.type == TYPE_FLOAT) {
+				yyerror("~ avec un flottant");
+			} else if($2.ptr->info.type == TYPE_MATRIX) {
+				//$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
+			} else if($2.ptr->info.type == TYPE_INT) {
+				$$.ptr = newtemp(&tds, TYPE_INT);
+				gencode(liste_quad, QOP_NEG, $2.ptr, NULL, $$.ptr);
+			} else {
+				$$.ptr = newtemp(&tds, TYPE_NONE);
+			}
+		}
+    /*| '*' expression %prec UNARY    //On fait les pointeurs ?
+    | '&' expression %prec UNARY*/
+    | '(' expression ')' {$$ = $2;}
 ;
 
        
-intervalle_dimension : intervalle_dimension '[' liste_rangee ']' { $$.nDim = $1.nDim + 1;
-                        }
-                        | '[' liste_rangee ']' {$$.type_tab = $2.type_tab; $$.nDim = 1;}
+intervalle_dimension : 
+	intervalle_dimension '[' liste_rangee ']' {$$.nDim = $1.nDim + 1;}
+    | '[' liste_rangee ']' {$$.type_tab = $2.type_tab; $$.nDim = 1;}
 ;
 
-liste_rangee : liste_rangee ';' rangee { $$.nDim = $1.nDim + 1;
-                }
-                | rangee {$$ = $1; $$.nDim = 1;}
+liste_rangee : 
+	liste_rangee ';' rangee { $$.nDim = $1.nDim + 1;}
+    | rangee {$$ = $1; $$.nDim = 1;}
 ;
 
 rangee : '*' {$$.type_tab = TYPE_MATRIX; /*Matrix exclusivement*/} 
@@ -1001,74 +650,97 @@ liste_entiers : liste_entiers ',' C_INT | C_INT
 type : INT {$$ = TYPE_INT;} | FLOAT {$$ = TYPE_FLOAT;} | MATRIX {$$ = TYPE_MATRIX;}
 ;
 
-valeur : IDENT {	struct noeud* entree = get_symbole(tds, $1); 
-		    	if(entree == NULL) 
-			{
-				entree = insertion(&tds, $1, SORTE_VARIABLE, TYPE_NONE);
+valeur : 
+	IDENT {
+			struct noeud* entree = get_symbole(tds, $1); 
+			if(entree == NULL) {
+				char err_msg[MAX_LENGTH_VAR_NAME + 20];
+				sprintf(err_msg, "Undeclared name : '%s'", $1);
+				yyerror(err_msg);
+				entree = insertion(&tds, $1, SORTE_NONE, TYPE_ERROR);
 			}
 			$$.ptr = entree;
-}	| constante_entiere {
-        		struct noeud* entree = get_symbole_constante_int(tds, $1);
-		        $$.ptr = entree;}
+		}	
+	| constante_entiere {
+        	struct noeud* entree = get_symbole_constante_int(tds, $1);
+		    $$.ptr = entree;
+		}
 	| constante_flottante {
-				struct noeud* entree = get_symbole_constante(tds, $1);	
-				$$.ptr = entree;}
-        | IDENT intervalle_dimension {} 
-        | incr_et_decr {struct noeud* entree = get_symbole(tds, $1.ptr->info.nom); 
-		    	if(entree == NULL) 
-			{
+			struct noeud* entree = get_symbole_constante(tds, $1);	
+			$$.ptr = entree;
+		}
+    | IDENT intervalle_dimension {} 
+    | incr_et_decr {
+			struct noeud* entree = get_symbole(tds, $1.ptr->info.nom); 
+		    if(entree == NULL) {
 				entree = insertion(&tds, $1.ptr->info.nom, SORTE_VARIABLE, TYPE_NONE);
 			}
-			$$.ptr = entree;}
-        | appel_fonction {} 
+			$$.ptr = entree;
+		}
+    | appel_fonction {} 
 ;
 
-incr_et_decr : IDENT INCR {	$2 = QOP_POST_INCR; 
-			    	struct noeud* entree = get_symbole(tds, $1); 
-			    	if(entree == NULL) 
-				{
-					fprintf(stderr,"Name '%s' undeclared\n",$1);
-					exit(1);
-				}
-				gencode(liste_quad, $2, entree, NULL, entree);
-				$$.ptr = entree;
-			    }
-	     | IDENT DECR {	$2 = QOP_POST_DECR;
-	     			struct noeud* entree = get_symbole(tds, $1); 
-			    	if(entree == NULL) 
-				{
-					fprintf(stderr,"Name '%s' undeclared\n",$1);
-					exit(1);
-				}
-				gencode(liste_quad, $2, entree, NULL, entree);
-				$$.ptr = entree; 
+incr_et_decr : 
+	IDENT INCR {
+			$2 = QOP_POST_INCR; 
+			struct noeud* entree = get_symbole(tds, $1); 
+			if(entree == NULL) {
+				char err_msg[MAX_LENGTH_VAR_NAME + 20];
+				sprintf(err_msg, "Undeclared name : '%s'", $1);
+				yyerror(err_msg);
+				entree = insertion(&tds, $1, SORTE_NONE, TYPE_ERROR);
 			}
-	     | INCR IDENT {    $1 = QOP_PRE_INCR;
-	     			struct noeud* entree = get_symbole(tds, $2); 
-			    	if(entree == NULL) 
-				{
-					fprintf(stderr,"Name '%s' undeclared\n",$2);
-					exit(1);
-				}
-				gencode(liste_quad, $1, entree, NULL, entree);
-				$$.ptr = entree; }
-	     | DECR IDENT {    $1 = QOP_PRE_DECR;
-	     			struct noeud* entree = get_symbole(tds, $2); 
-			    	if(entree == NULL) 
-				{
-					fprintf(stderr,"Name '%s' undeclared\n",$2);
-					exit(1);
-				}
-				gencode(liste_quad, $1, entree, NULL, entree);
-				$$.ptr = entree;  }
+			gencode(liste_quad, $2, entree, NULL, entree);
+			$$.ptr = entree;
+		}
+	| IDENT DECR {
+			$2 = QOP_POST_DECR;
+	     	struct noeud* entree = get_symbole(tds, $1); 
+			if(entree == NULL) {
+				char err_msg[MAX_LENGTH_VAR_NAME + 20];
+				sprintf(err_msg, "Undeclared name : '%s'", $1);
+				yyerror(err_msg);
+				entree = insertion(&tds, $1, SORTE_NONE, TYPE_ERROR);
+			}
+			gencode(liste_quad, $2, entree, NULL, entree);
+			$$.ptr = entree; 
+		}
+	| INCR IDENT {
+			$1 = QOP_PRE_INCR;
+	     	struct noeud* entree = get_symbole(tds, $2); 
+			if(entree == NULL) {
+				char err_msg[MAX_LENGTH_VAR_NAME + 20];
+				sprintf(err_msg, "Undeclared name : '%s'", $2);
+				yyerror(err_msg);
+				entree = insertion(&tds, $2, SORTE_NONE, TYPE_ERROR);
+			}
+			gencode(liste_quad, $1, entree, NULL, entree);
+			$$.ptr = entree;
+		}
+	| DECR IDENT {
+			$1 = QOP_PRE_DECR;
+	     	struct noeud* entree = get_symbole(tds, $2); 
+			if(entree == NULL) {
+				char err_msg[MAX_LENGTH_VAR_NAME + 20];
+				sprintf(err_msg, "Undeclared name : '%s'", $2);
+				yyerror(err_msg);
+				entree = insertion(&tds, $2, SORTE_NONE, TYPE_ERROR);
+			}
+			gencode(liste_quad, $1, entree, NULL, entree);
+			$$.ptr = entree;
+		}
 ;
 
-constante_entiere : C_INT {struct noeud* entree = insertion_constante(&tds, TYPE_INT, $1);
-                   $$ = $1;} 
+constante_entiere : C_INT {
+			struct noeud* entree = insertion_constante(&tds, TYPE_INT, $1);
+			$$ = $1;
+		} 
 ;
 
-constante_flottante : C_FLOAT {struct noeud* entree = insertion_constante(&tds, TYPE_FLOAT, $1);
-		   $$ = $1;} 
+constante_flottante : C_FLOAT {
+			struct noeud* entree = insertion_constante(&tds, TYPE_FLOAT, $1);
+			$$ = $1;
+		} 
 ;
 
 assign : '=' {$$ = QOP_ASSIGN;}
@@ -1088,6 +760,6 @@ assign : '=' {$$ = QOP_ASSIGN;}
 
 void yyerror(const char* msg)
 {
-        syntaxe_error = 1;
+    syntaxe_error = 1;
 	fprintf(stderr, "Syntaxe error : %s\n", msg);
 }
