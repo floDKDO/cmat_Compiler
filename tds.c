@@ -230,11 +230,11 @@ struct noeud* insertion_constante(struct tds** tds, enum type type, float valeur
         
         if(type == TYPE_INT)
         {
-        	noeud->info.constante_entiere.valeur_entiere = valeur;
+        	noeud->info.valeur_entiere = valeur;
         }
         else if(type == TYPE_FLOAT)
         {
-        	noeud->info.constante_flottante.valeur_flottante = valeur;
+        	noeud->info.valeur_flottante = valeur;
         }
         
         (*tds)->listes[indice] = noeud;
@@ -267,11 +267,11 @@ struct noeud* insertion_constante(struct tds** tds, enum type type, float valeur
             
         if(type == TYPE_INT)
         {
-        	noeud->info.constante_entiere.valeur_entiere = valeur;
+        	noeud->info.valeur_entiere = valeur;
         }
         else if(type == TYPE_FLOAT)
         {
-        	noeud->info.constante_flottante.valeur_flottante = valeur;
+        	noeud->info.valeur_flottante = valeur;
         }
             
             (*tds)->listes[indice] = ajout_queue((*tds)->listes[indice], noeud);
@@ -302,7 +302,7 @@ struct noeud* get_symbole_constante(struct tds* tds, float valeur)
         {
             if(noeud->info.sorte == SORTE_CONSTANTE)
             {
-		    if(noeud->info.type == TYPE_FLOAT && noeud->info.constante_flottante.valeur_flottante == valeur) //noeud trouvé
+		    if(noeud->info.type == TYPE_FLOAT && noeud->info.valeur_flottante == valeur) //noeud trouvé
 		    {
 		        //printf("Entrée %d non-vide : nom %s présent\n", indice, nom);
 		        return noeud; //noeud = noeud ayant la valeur "valeur"
@@ -321,7 +321,7 @@ struct noeud* get_symbole_constante_int(struct tds* tds, int valeur)
         {
             if(noeud->info.sorte == SORTE_CONSTANTE)
             {
-		    if(noeud->info.type == TYPE_INT && noeud->info.constante_entiere.valeur_entiere == valeur) //noeud trouvé
+		    if(noeud->info.type == TYPE_INT && noeud->info.valeur_entiere == valeur) //noeud trouvé
 		    {
 		        //printf("Entrée %d non-vide : nom %s présent\n", indice, nom);
 		        return noeud; //noeud = noeud ayant la valeur "valeur"
@@ -442,42 +442,42 @@ void affichage_symbole(struct noeud* noeud)
 	if(noeud->info.sorte == SORTE_CONSTANTE)
 	{
 		if(noeud->info.type == TYPE_INT)
-			printf("%d", noeud->info.constante_entiere.valeur_entiere);
-        	else if(noeud->info.type == TYPE_FLOAT)
-			printf("%f", noeud->info.constante_flottante.valeur_flottante);
+			fprintf(output, "%d", noeud->info.valeur_entiere);
+        else if(noeud->info.type == TYPE_FLOAT)
+			fprintf(output, "%f", noeud->info.valeur_flottante);
 	}
 	else
 	{
-		printf("%s", noeud->info.nom);
+		fprintf(output, "$%s", noeud->info.nom);
 	}
 }
 
 void affichage_tds(struct tds* tds)
 {
     struct noeud* temp;
-    printf("\n");
-    printf("\t\t\tTable des symboles\n");
-    printf("/////////////////////////////////////////////////////////////////////////\n");
+    fprintf(output, "\n");
+    fprintf(output, "\t\t\tTable des symboles\n");
+    fprintf(output, "/////////////////////////////////////////////////////////////////////////\n");
     for(int i = 0; i < tds->taille_max; i++) 
 	{
 	    temp = tds->listes[i];
 	    if(temp != NULL)
-	    	printf("Entrée %d : ", i);
+	    	fprintf(output, "Entrée %d : ", i);
 	    while(temp != NULL) 
 	    {
 	    	if(temp->info.sorte == SORTE_CONSTANTE)
 	    	{
 	    		if(temp->info.type == TYPE_INT)
-	    			printf("|%s, %s, %s, %d|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type), temp->info.constante_entiere.valeur_entiere);
+	    			fprintf(output, "|%s, %s, %s, %d|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type), temp->info.valeur_entiere);
         		else if(temp->info.type == TYPE_FLOAT)
-				printf("|%s, %s, %s, %f|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type), temp->info.constante_flottante.valeur_flottante);
+				    fprintf(output, "|%s, %s, %s, %f|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type), temp->info.valeur_flottante);
 	    	}
 	    	else
-	        	printf("|%s, %s, %s|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type));
+	        	fprintf(output, "|%s, %s, %s|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type));
 	        temp = temp->suivant;
-	        printf("\n");
+	        fprintf(output, "\n");
 	    }
 	    
 	}
-	printf("/////////////////////////////////////////////////////////////////////////\n\n");
+	fprintf(output, "/////////////////////////////////////////////////////////////////////////\n\n");
 }

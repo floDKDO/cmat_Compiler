@@ -6,10 +6,13 @@ extern int yyparse();
 
 struct tds* tds;
 struct Liste_Quad* liste_quad;
+FILE * output;
 
 int main()
 {
 	//yydebug = 1;
+
+	output = stdout;
 	
 	tds = creation_tds(2000, 0);
 	liste_quad = creer_liste_quad(17);
@@ -17,8 +20,12 @@ int main()
 	int r = yyparse();
 	printf("-> %d\n", r);
 	
-	affichage_tds(tds);
-	affiche_code(liste_quad);
+	if(!r){
+		affichage_tds(tds);
+		affiche_code(liste_quad);
+		fprintf(output, "\n\n");
+		affiche_spim(liste_quad);
+	}
 
 	destruction_liste_quad(liste_quad);
 	destruction_tds(tds);

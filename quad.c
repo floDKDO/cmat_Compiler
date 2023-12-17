@@ -260,3 +260,426 @@ void affiche_code(struct Liste_Quad* liste_quad)
         printf("\n");
     }
 }
+
+
+void affiche_quad_spim(struct Quad* quad)
+{
+	switch (quad->op)
+	{
+	case QOP_PLUS:
+		if (quad->res->info.type == TYPE_INT) {
+			if (quad->arg1->info.sorte == SORTE_CONSTANTE) {
+				fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+			} else {
+				fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+			}
+			if (quad->arg2->info.sorte == SORTE_CONSTANTE) {
+				fprintf(output, "\taddi $t2 $t0 %d\n", quad->arg2->info.valeur_entiere);
+			} else {
+				fprintf(output, "\tlw $t1 _%s\n", quad->arg2->info.nom);
+				fprintf(output, "\tadd $t2 $t0 $t1\n");
+			}
+			fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+		} else {
+			if (quad->arg1->info.sorte == SORTE_CONSTANTE) {
+				fprintf(output, "\tli.s $f0 %f\n", quad->arg1->info.valeur_flottante);
+			} else {
+				fprintf(output, "\tl.s $f0 _%s\n", quad->arg1->info.nom);
+			}
+			if (quad->arg2->info.sorte == SORTE_CONSTANTE) {
+				fprintf(output, "\tli.s $f1 %f\n", quad->arg2->info.valeur_flottante);
+			} else {
+				fprintf(output, "\tl.s $f1 _%s\n", quad->arg2->info.nom);
+			}
+			fprintf(output, "\tadd.s $f2 $f0 $f1\n");
+			fprintf(output, "\ts.s $f2 _%s\n", quad->res->info.nom);
+		}
+		break;
+	case QOP_MINUS:
+		if (quad->res->info.type == TYPE_INT) {
+			if (quad->arg1->info.sorte == SORTE_CONSTANTE) {
+				fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+			} else {
+				fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+			}
+			if (quad->arg2->info.sorte == SORTE_CONSTANTE) {
+				fprintf(output, "\tli $t0 %d\n", quad->arg2->info.valeur_entiere);
+			} else {
+				fprintf(output, "\tlw $t1 _%s\n", quad->arg2->info.nom);
+			}
+			fprintf(output, "\tsub $t2 $t0 $t1\n");
+			fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+		} else {
+			if (quad->arg1->info.sorte == SORTE_CONSTANTE) {
+				fprintf(output, "\tli.s $f0 %f\n", quad->arg1->info.valeur_flottante);
+			} else {
+				fprintf(output, "\tl.s $f0 _%s\n", quad->arg1->info.nom);
+			}
+			if (quad->arg2->info.sorte == SORTE_CONSTANTE) {
+				fprintf(output, "\tli.s $f1 %f\n", quad->arg2->info.valeur_flottante);
+			} else {
+				fprintf(output, "\tl.s $f1 _%s\n", quad->arg2->info.nom);
+			}
+			fprintf(output, "\tsub.s $f2 $f0 $f1\n");
+			fprintf(output, "\ts.s $f2 _%s\n", quad->res->info.nom);
+		}
+		break;
+	case QOP_UNARY_MINUS:
+		if (quad->res->info.type == TYPE_INT) {
+			if (quad->arg1->info.sorte == SORTE_CONSTANTE) {
+				fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+			} else {
+				fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+			}
+			fprintf(output, "\tneg $t2 $t0\n");
+			fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+		} else {
+			if (quad->arg1->info.sorte == SORTE_CONSTANTE) {
+				fprintf(output, "\tli.s $f0 %f\n", quad->arg1->info.valeur_flottante);
+			} else {
+				fprintf(output, "\tl.s $f0 _%s\n", quad->arg1->info.nom);
+			}
+			fprintf(output, "\tneg.s $f2 $f0\n");
+			fprintf(output, "\ts.s $f2 _%s\n", quad->res->info.nom);
+		}
+		break;
+	case QOP_MULT:
+		if (quad->res->info.type == TYPE_INT) {
+			if (quad->arg1->info.sorte == SORTE_CONSTANTE) {
+				fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+			} else {
+				fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+			}
+			if (quad->arg2->info.sorte == SORTE_CONSTANTE) {
+				fprintf(output, "\tli $t0 %d\n", quad->arg2->info.valeur_entiere);
+			} else {
+				fprintf(output, "\tlw $t1 _%s\n", quad->arg2->info.nom);
+			}
+			fprintf(output, "\tmul $t2 $t0 $t1\n");
+			fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+		} else {
+			if (quad->arg1->info.sorte == SORTE_CONSTANTE) {
+				fprintf(output, "\tli.s $f0 %f\n", quad->arg1->info.valeur_flottante);
+			} else {
+				fprintf(output, "\tl.s $f0 _%s\n", quad->arg1->info.nom);
+			}
+			if (quad->arg2->info.sorte == SORTE_CONSTANTE) {
+				fprintf(output, "\tli.s $f1 %f\n", quad->arg2->info.valeur_flottante);
+			} else {
+				fprintf(output, "\tl.s $f1 _%s\n", quad->arg2->info.nom);
+			}
+			fprintf(output, "\tmul.s $f2 $f0 $f1\n");
+			fprintf(output, "\ts.s $f2 _%s\n", quad->res->info.nom);
+		}
+		break;
+	case QOP_DIV:
+		if (quad->res->info.type == TYPE_INT) {
+			if (quad->arg1->info.sorte == SORTE_CONSTANTE) {
+				fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+			} else {
+				fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+			}
+			if (quad->arg2->info.sorte == SORTE_CONSTANTE) {
+				fprintf(output, "\tli $t0 %d\n", quad->arg2->info.valeur_entiere);
+			} else {
+				fprintf(output, "\tlw $t1 _%s\n", quad->arg2->info.nom);
+			}
+			fprintf(output, "\tdiv $t2 $t0 $t1\n");
+			fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+		} else {
+			if (quad->arg1->info.sorte == SORTE_CONSTANTE) {
+				fprintf(output, "\tli.s $f0 %f\n", quad->arg1->info.valeur_flottante);
+			} else {
+				fprintf(output, "\tl.s $f0 _%s\n", quad->arg1->info.nom);
+			}
+			if (quad->arg2->info.sorte == SORTE_CONSTANTE) {
+				fprintf(output, "\tli.s $f1 %f\n", quad->arg2->info.valeur_flottante);
+			} else {
+				fprintf(output, "\tl.s $f1 _%s\n", quad->arg2->info.nom);
+			}
+			fprintf(output, "\tdiv.s $f2 $f0 $f1\n");
+			fprintf(output, "\ts.s $f2 _%s\n", quad->res->info.nom);
+		}
+		break;
+	case QOP_ASSIGN:
+		if (quad->res->info.type == TYPE_INT) {
+			if (quad->arg1->info.sorte == SORTE_CONSTANTE) {
+				fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+			} else {
+				fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+			}
+			fprintf(output, "\tsw $t0 _%s\n", quad->res->info.nom);
+		} else {
+			if (quad->arg1->info.sorte == SORTE_CONSTANTE) {
+				fprintf(output, "\tli.s $f0 %f\n", quad->arg1->info.valeur_flottante);
+			} else {
+				fprintf(output, "\tl.s $f0 _%s\n", quad->arg1->info.nom);
+			}
+			fprintf(output, "\ts.s $f0 _%s\n", quad->res->info.nom);
+		}
+		break;
+
+	case QOP_AND:
+		if (quad->arg1->info.sorte == SORTE_CONSTANTE)
+		{
+			fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+		} else {
+			fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+		}
+		if (quad->arg2->info.sorte == SORTE_CONSTANTE)
+		{
+			fprintf(output, "\tandi $t2 $t0 %d\n", quad->arg1->info.valeur_entiere);
+		} else {
+			fprintf(output, "\tlw $t1 _%s\n", quad->arg1->info.nom);
+			fprintf(output, "\tand $t2 $t0 $t1\n");
+		}
+		fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+		break;
+	case QOP_OR:
+		if (quad->arg1->info.sorte == SORTE_CONSTANTE)
+		{
+			fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+		} else {
+			fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+		}
+		if (quad->arg2->info.sorte == SORTE_CONSTANTE)
+		{
+			fprintf(output, "\tori $t2 $t0 %d\n", quad->arg1->info.valeur_entiere);
+		} else {
+			fprintf(output, "\tlw $t1 _%s\n", quad->arg1->info.nom);
+			fprintf(output, "\tor $t2 $t0 $t1\n");
+		}
+		fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+		break;
+	case QOP_XOR:
+		if (quad->arg1->info.sorte == SORTE_CONSTANTE)
+		{
+			fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+		} else {
+			fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+		}
+		if (quad->arg2->info.sorte == SORTE_CONSTANTE)
+		{
+			fprintf(output, "\txori $t2 $t0 %d\n", quad->arg1->info.valeur_entiere);
+		} else {
+			fprintf(output, "\tlw $t1 _%s\n", quad->arg1->info.nom);
+			fprintf(output, "\txor $t2 $t0 $t1\n");
+		}
+		fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+		break;
+	case QOP_MOD:
+		if (quad->arg1->info.sorte == SORTE_CONSTANTE)
+		{
+			fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+		} else {
+			fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+		}
+		if (quad->arg2->info.sorte == SORTE_CONSTANTE)
+		{
+			fprintf(output, "\tli $t1 %d\n", quad->arg1->info.valeur_entiere);
+		} else {
+			fprintf(output, "\tlw $t1 _%s\n", quad->arg1->info.nom);
+		}
+		fprintf(output, "\trem $t2 $t0 $t1\n");
+		fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+		break;
+	case QOP_NOT:
+		if (quad->arg1->info.sorte == SORTE_CONSTANTE)
+		{
+			fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+		} else {
+			fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+		}
+		fprintf(output, "\tslti $t2 $t0 1\n");
+		fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+		break;
+	case QOP_NEG:
+		if (quad->arg1->info.sorte == SORTE_CONSTANTE)
+		{
+			fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+		} else {
+			fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+		}
+		fprintf(output, "\tnot $t2 $t0\n");
+		fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+		break;
+
+	case QOP_LE:
+		if (quad->arg1->info.type == TYPE_INT)
+		{	
+			if (quad->arg1->info.sorte == SORTE_CONSTANTE)
+			{
+				fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+			} else {
+				fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+			}
+			if (quad->arg2->info.sorte == SORTE_CONSTANTE)
+			{
+				fprintf(output, "\tli $t1 %d\n", quad->arg2->info.valeur_entiere);
+			} else {
+				fprintf(output, "\tlw $t1 _%s\n", quad->arg2->info.nom);
+			}
+			fprintf(output, "\tsle $t2 $t0 $t1\n");
+			fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+		} else {
+			//TODO
+		}
+		break;
+	case QOP_LT:
+		if (quad->arg1->info.type == TYPE_INT)
+		{	
+			if (quad->arg1->info.sorte == SORTE_CONSTANTE)
+			{
+				fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+			} else {
+				fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+			}
+			if (quad->arg2->info.sorte == SORTE_CONSTANTE)
+			{
+				fprintf(output, "\tli $t1 %d\n", quad->arg2->info.valeur_entiere);
+			} else {
+				fprintf(output, "\tlw $t1 _%s\n", quad->arg2->info.nom);
+			}
+			fprintf(output, "\tslt $t2 $t0 $t1\n");
+			fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+		} else {
+			//TODO
+		}
+		break;
+	case QOP_GE:
+		if (quad->arg1->info.type == TYPE_INT)
+		{	
+			if (quad->arg1->info.sorte == SORTE_CONSTANTE)
+			{
+				fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+			} else {
+				fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+			}
+			if (quad->arg2->info.sorte == SORTE_CONSTANTE)
+			{
+				fprintf(output, "\tli $t1 %d\n", quad->arg2->info.valeur_entiere);
+			} else {
+				fprintf(output, "\tlw $t1 _%s\n", quad->arg2->info.nom);
+			}
+			fprintf(output, "\tsge $t2 $t0 $t1\n");
+			fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+		} else {
+			//TODO
+		}
+		break;
+	case QOP_GT:
+		if (quad->arg1->info.type == TYPE_INT)
+		{	
+			if (quad->arg1->info.sorte == SORTE_CONSTANTE)
+			{
+				fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+			} else {
+				fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+			}
+			if (quad->arg2->info.sorte == SORTE_CONSTANTE)
+			{
+				fprintf(output, "\tli $t1 %d\n", quad->arg2->info.valeur_entiere);
+			} else {
+				fprintf(output, "\tlw $t1 _%s\n", quad->arg2->info.nom);
+			}
+			fprintf(output, "\tsgt $t2 $t0 $t1\n");
+			fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+		} else {
+			//TODO
+		}
+		break;
+	case QOP_EQ:
+		if (quad->arg1->info.type == TYPE_INT)
+		{	
+			if (quad->arg1->info.sorte == SORTE_CONSTANTE)
+			{
+				fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+			} else {
+				fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+			}
+			if (quad->arg2->info.sorte == SORTE_CONSTANTE)
+			{
+				fprintf(output, "\tli $t1 %d\n", quad->arg2->info.valeur_entiere);
+			} else {
+				fprintf(output, "\tlw $t1 _%s\n", quad->arg2->info.nom);
+			}
+			fprintf(output, "\tseq $t2 $t0 $t1\n");
+			fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+		} else {
+			//TODO
+		}
+		break;
+	case QOP_NE:
+		if (quad->arg1->info.type == TYPE_INT)
+		{	
+			if (quad->arg1->info.sorte == SORTE_CONSTANTE)
+			{
+				fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+			} else {
+				fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+			}
+			if (quad->arg2->info.sorte == SORTE_CONSTANTE)
+			{
+				fprintf(output, "\tli $t1 %d\n", quad->arg2->info.valeur_entiere);
+			} else {
+				fprintf(output, "\tlw $t1 _%s\n", quad->arg2->info.nom);
+			}
+			fprintf(output, "\tsne $t2 $t0 $t1\n");
+			fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+		} else {
+			//TODO
+		}
+		break;
+
+	case QOP_CAST:
+		if (quad->arg1->info.sorte == SORTE_CONSTANTE)
+		{
+			fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+		} else {
+			fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+		}
+		fprintf(output, "\tmtc1 $t0 $f0\n");
+		fprintf(output, "\tcvt.s.w $f0 $f0\n");
+		fprintf(output, "\ts.s $f0 _%s\n", quad->res->info.nom);
+	default:
+		break;
+	}
+}
+
+void affiche_data_spim()
+{	
+	fprintf(output, "newline: .asciiz \"\\n\"\n");
+	struct noeud* temp;
+	for(int i = 0; i < tds->taille_max; i++) 
+	{
+	    temp = tds->listes[i];
+	    while(temp != NULL) 
+	    {
+	    	if(temp->info.sorte != SORTE_CONSTANTE) {
+				if (temp->info.type == TYPE_INT) {
+					fprintf(output, "_%s:\t.word %d\n", temp->info.nom, temp->info.valeur_entiere);
+				} else {
+					fprintf(output, "_%s:\t.float %f\n", temp->info.nom, temp->info.valeur_flottante);
+				}
+	    	}
+			temp = temp->suivant;
+	    }
+	}
+}
+
+void affiche_spim(struct Liste_Quad* liste_quad) 
+{
+	fprintf(output, "\t.data\n");
+	affiche_data_spim();
+
+	fprintf(output, "\n\t.text\nmain:\n");
+	for (unsigned int i = 0; i < liste_quad->nextquad; i++)
+	{
+		affiche_quad_spim(&liste_quad->quads[i]);
+	}
+	fprintf(output, "\n\tli $v0 4\n\tla $a0 newline\n\tsyscall\n");
+	fprintf(output, "\n\tli $v0 10\n\tsyscall\n");
+
+}
+
+

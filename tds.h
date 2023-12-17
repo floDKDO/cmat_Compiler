@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdint.h>
+#include "global.h"
 
 //tester si la valeur de retour est NULL, si oui, appeler la fonction raler
 #define NCHK(prim) do { if ((prim) == NULL) { raler (#prim); } } while (0)
@@ -44,15 +45,8 @@ struct info //infos sur un identificateur
 	//VARIABLE (rien de spécial), CONSTANTE (valeur de la constante), TABLEAU (NOMBRE DIM + TAILLES DIM), MATRIX (NOMBRE DIM + TAILLES DIM)
 	union
 	{
-	    struct constante_flottante
-	    {
-	        float valeur_flottante; 
-	    } constante_flottante;
-	    
-	    struct constante_entiere
-	    {
-	        int valeur_entiere;
-	    } constante_entiere;
+	    float valeur_flottante;
+	    int valeur_entiere;
 	    
 	    struct tableau
 	    {
