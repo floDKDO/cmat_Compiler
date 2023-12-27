@@ -206,7 +206,7 @@ struct noeud* insertion_constante(struct tds** tds, enum type type, float valeur
     
     char* nom;
     NCHK(nom = malloc(MAX_LONGUEUR_VARIABLE * sizeof(char)));
-    snprintf(nom, MAX_LONGUEUR_VARIABLE, "constante %d", compteur);
+    snprintf(nom, MAX_LONGUEUR_VARIABLE, "constante_%d", compteur);
     
     int indice = fonctionHash(nom, (*tds)->taille_max);
     

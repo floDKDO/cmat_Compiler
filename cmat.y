@@ -198,9 +198,9 @@ expression :
 			struct noeud* entree;
 			if($1.ptr->info.sorte == SORTE_CONSTANTE) {
 				if($1.ptr->info.type == TYPE_INT)
-					entree = get_symbole_constante_int(tds, $1.ptr->info.constante_entiere.valeur_entiere);
+					entree = get_symbole_constante_int(tds, $1.ptr->info.valeur_entiere);
 				else if($1.ptr->info.type == TYPE_FLOAT)
-					entree = get_symbole_constante(tds, $1.ptr->info.constante_flottante.valeur_flottante);
+					entree = get_symbole_constante(tds, $1.ptr->info.valeur_flottante);
 			} else entree = get_symbole(tds, $1.ptr->info.nom);
 			
 			$$.ptr = entree;

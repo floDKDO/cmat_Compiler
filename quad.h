@@ -81,7 +81,6 @@ void affiche_quad(struct Quad* quad);
 
 void affiche_code(struct Liste_Quad* liste_quad);
 
-
 void affiche_spim(struct Liste_Quad* liste_quad);
 
 
