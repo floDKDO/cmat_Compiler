@@ -19,6 +19,7 @@ enum type //type de l'identificateur
     TYPE_NONE, //aucun type ou type inconnu
 	TYPE_INT,
 	TYPE_FLOAT,
+	TYPE_STR,
 	TYPE_MATRIX,
 	TYPE_ERROR
 };
@@ -47,6 +48,7 @@ struct info //infos sur un identificateur
 	{
 	    float valeur_flottante;
 	    int valeur_entiere;
+	    char* valeur_str;
 	    
 	    struct tableau
 	    {
@@ -93,6 +95,7 @@ struct noeud* ajout_queue(struct noeud* tete, struct noeud* new_queue);
 struct noeud* insertion(struct tds** tds, char* nom, enum sorte sorte, enum type type);
 
 struct noeud* insertion_constante(struct tds** tds, enum type type, float valeur);
+struct noeud* insertion_constante_str(struct tds** tds, enum type type, char valeur[MAX_LONGUEUR_VARIABLE]);
 
 struct noeud* newtemp(struct tds** tds, enum type type);
 
@@ -102,6 +105,7 @@ bool recherche(struct tds* tds, char* nom);
 
 struct noeud* get_symbole_constante(struct tds* tds, float valeur);
 struct noeud* get_symbole_constante_int(struct tds* tds, int valeur);
+struct noeud* get_symbole_constante_str(struct tds* tds, char valeur[MAX_LONGUEUR_VARIABLE]);
 
 enum type get_type(struct tds* tds, char* nom);
 

@@ -29,6 +29,7 @@ int indice_tab_str = 0;
 	
 	float constante_flottante;
 	int constante_entiere;
+	char constante_caractere[MAX_LONGUEUR_VARIABLE];
 	
 	struct {
 		struct noeud* ptr;
@@ -45,7 +46,8 @@ int indice_tab_str = 0;
 %token INT FLOAT MATRIX
 %token IF ELSE FOR RETURN  
 %token MAIN PRINTF PRINT PRINTMAT WHILE
-%token C_STR
+%token <constante_caractere> C_STR
+%type <constante_caractere> constante_caractere
 
 %token <nom> IDENT
 %type <nom> variable_declaree
@@ -72,7 +74,7 @@ int indice_tab_str = 0;
 %left UNARY INTERV_OP
 %right INCR DECR
 
-%type <exprval> expression incr_et_decr valeur 
+%type <exprval> expression incr_et_decr valeur appel_fonction operation
 %type <type> type;
 
 %start programme
@@ -101,7 +103,7 @@ instruction : declaration_variable ';'
 	    | RETURN C_INT ';'
 ;
 
-condition : IF '(' expression ')' corps 
+condition : IF '(' expression ')' corps {}
         | IF '(' expression ')' corps ELSE corps
 ;
 
@@ -161,9 +163,14 @@ liste_operation :
 	| operation
 ;
 
-operation : expression
-	| IDENT assign operation
-	| IDENT intervalle_dimension assign operation
+operation : expression {$$.ptr = $1.ptr;}
+	| IDENT assign operation {struct noeud* entree = get_symbole(tds, $1);
+	
+				  //TODO : switch case pour les différents types de QOP_ASSIGN
+	
+				  gencode(liste_quad, QOP_ASSIGN, $3.ptr, NULL, entree);
+				  $$.ptr = entree;}
+	| IDENT intervalle_dimension assign operation {}
 ;
 
 declaration_fonction : 
@@ -172,13 +179,26 @@ declaration_fonction :
 ;
 		 
 appel_fonction : 
-	IDENT '(' liste_argument ')'
-    | IDENT '(' ')'
-	| PRINTF '(' C_STR ')'
-	| PRINT '(' constante_entiere ')'
-	| PRINT '(' constante_flottante ')'
-    | PRINT '(' IDENT ')'
-	| PRINTMAT '(' IDENT ')'
+	IDENT '(' liste_argument ')' {}
+        | IDENT '(' ')' {}
+	| PRINTF '(' constante_caractere ')' {
+				struct noeud* entree = get_symbole_constante_str(tds, $3);
+				gencode(liste_quad, QOP_PRINTF, NULL, NULL, entree);
+				$$.ptr = entree;}
+	| PRINT '(' constante_entiere ')' {
+				struct noeud* entree = get_symbole_constante_int(tds, $3);
+				gencode(liste_quad, QOP_PRINT, NULL, NULL, entree);
+				$$.ptr = entree;}
+	| PRINT '(' constante_flottante ')' {
+				struct noeud* entree = get_symbole_constante(tds, $3);
+				gencode(liste_quad, QOP_PRINT, NULL, NULL, entree);
+				$$.ptr = entree;}
+        | PRINT '(' IDENT ')' {
+        			struct noeud* entree = get_symbole(tds, $3);
+				gencode(liste_quad, QOP_PRINT, NULL, NULL, entree);
+				$$.ptr = entree;
+				}
+	| PRINTMAT '(' IDENT ')' {}
 ;
             
 liste_parametre : liste_parametre ',' parametre | parametre
@@ -190,7 +210,8 @@ liste_argument : liste_argument ',' argument | argument
 parametre : type IDENT
 ;
 
-argument :  IDENT assign expression | expression
+argument :  IDENT assign expression 
+	| expression
 ; 
 
 expression : 
@@ -740,6 +761,12 @@ constante_entiere : C_INT {
 constante_flottante : C_FLOAT {
 			struct noeud* entree = insertion_constante(&tds, TYPE_FLOAT, $1);
 			$$ = $1;
+		} 
+;
+
+constante_caractere : C_STR {
+			struct noeud* entree = insertion_constante_str(&tds, TYPE_STR, $1);
+			strcpy($$, $1);
 		} 
 ;
 

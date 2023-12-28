@@ -53,7 +53,7 @@ matrix              			{return MATRIX;}
 {ID}                			{strcpy(yylval.nom, yytext); return IDENT;}
 {INT}               			{yylval.constante_entiere=atoi(yytext); return C_INT;}
 {FLOAT}             			{yylval.constante_flottante=atof(yytext); return C_FLOAT;}
-{STR}               			{return C_STR;}
+{STR}               			{strcpy(yylval.constante_caractere, yytext); return C_STR;}
 
 {COMMENT}           			{/*Ignore*/;}
 {WHITESPACE}        			{/*Ignore*/;}

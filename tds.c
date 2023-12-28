@@ -87,6 +87,8 @@ void destruction_tds(struct tds* tds)
 	    {
 	        temp = tds->listes[i];
 	        tds->listes[i] = tds->listes[i]->suivant;
+	        if(temp->info.type == TYPE_STR)
+	        	free(temp->info.valeur_str);
 	        free(temp->info.nom);
 	        free(temp);
 	    }
@@ -152,6 +154,8 @@ struct noeud* insertion(struct tds** tds, char* nom, enum sorte sorte, enum type
         snprintf(noeud->info.nom, MAX_LONGUEUR_VARIABLE, "%s", nom);
         noeud->info.sorte = sorte;
         noeud->info.type = type;
+        noeud->info.valeur_entiere = 0;
+        noeud->info.valeur_flottante = 0.0;
         
         (*tds)->listes[indice] = noeud;
         (*tds)->taille_actuelle += 1;
@@ -179,6 +183,8 @@ struct noeud* insertion(struct tds** tds, char* nom, enum sorte sorte, enum type
             snprintf(noeud->info.nom, MAX_LONGUEUR_VARIABLE, "%s", nom);
             noeud->info.sorte = sorte;
             noeud->info.type = type;
+	     noeud->info.valeur_entiere = 0;
+	     noeud->info.valeur_flottante = 0.0;
             
             (*tds)->listes[indice] = ajout_queue((*tds)->listes[indice], noeud);
             (*tds)->taille_actuelle += 1;
@@ -294,6 +300,94 @@ struct noeud* insertion_constante(struct tds** tds, enum type type, float valeur
     return noeud;
 }
 
+
+
+struct noeud* insertion_constante_str(struct tds** tds, enum type type, char valeur[MAX_LONGUEUR_VARIABLE]) 
+{
+    static int compteur_str = 0; //pour le nom des constantes : 'constante x' avec 'x' = compteur
+    
+    char* nom;
+    NCHK(nom = malloc(MAX_LONGUEUR_VARIABLE * sizeof(char)));
+    snprintf(nom, MAX_LONGUEUR_VARIABLE, "constante_str_%d", compteur_str);
+    
+    int indice = fonctionHash(nom, (*tds)->taille_max);
+    
+    //info : il n'est pas nécessaire de regarder chaque entrée de la table des symboles pour vérifier si nom n'est pas déjà présent
+    //       car la fonction de hash nous donnerait le même indice pour le même nom
+    
+    struct noeud* noeud;
+    
+    //cas 1 : ajout dans une entrée vide
+    if((*tds)->listes[indice] == NULL)
+    {
+        //printf("ENTREE %d VIDE : AJOUT DE %s DANS LA TABLE\n", indice, nom);
+        
+        //créer l'entrée
+        NCHK(noeud = malloc(sizeof(struct noeud)));
+        noeud->suivant = NULL;
+        
+        noeud->info.nom = nom;
+        noeud->info.sorte = SORTE_CONSTANTE;
+        noeud->info.type = type;
+	
+	NCHK(noeud->info.valeur_str = malloc(MAX_LONGUEUR_VARIABLE * sizeof(char)));
+        snprintf(noeud->info.valeur_str, MAX_LONGUEUR_VARIABLE, "%s", valeur);
+
+        (*tds)->listes[indice] = noeud;
+        (*tds)->taille_actuelle += 1;
+        
+        compteur_str += 1;
+    }
+    else //cas 2 : ajout dans une entrée non vide
+    {
+        //parcourir la liste chainée de l'entrée et regarder si la clef est déjà présente
+        struct noeud* eventuel_noeud = get_elem((*tds)->listes[indice], nom);
+        
+        if(eventuel_noeud != NULL) //différent de NULL => noeud trouvé
+        {
+            //printf("NOM : %s DEJA PRESENT A l'ENTREE %d, MISE A JOUR !\n", nom, indice);
+            
+            //le modifier
+            eventuel_noeud->info.type = type;
+        }
+        else
+        {
+            //printf("PAS PRESENT : AJOUT DE %s DANS LA TABLE A L'ENTREE %d\n", nom, indice);
+            
+            //créer l'entrée
+            NCHK(noeud = malloc(sizeof(struct noeud)));
+            noeud->suivant = NULL;
+            noeud->info.nom = nom;
+            noeud->info.sorte = SORTE_CONSTANTE;
+            noeud->info.type = type;
+            
+        NCHK(noeud->info.valeur_str = malloc(MAX_LONGUEUR_VARIABLE * sizeof(char)));
+        
+        snprintf(noeud->info.valeur_str, MAX_LONGUEUR_VARIABLE, "%s", valeur);
+            
+            (*tds)->listes[indice] = ajout_queue((*tds)->listes[indice], noeud);
+            (*tds)->taille_actuelle += 1;
+            
+            compteur_str += 1;
+        }
+    }
+    
+	float load_factor = (float)((*tds)->taille_actuelle) / (float)((*tds)->taille_max); //obtenir le résultat de la division en nombres flottants
+    //printf("LOAD FACTOR : %f\n", load_factor);
+    /*if(load_factor >= 0.75)
+    {
+	printf("REHASHING REQUIS\n");
+	rehashing(tds);
+	int indice = fonctionHash(nom, (*tds)->taille_max);
+	noeud = get_symbole(*tds, nom);
+    }*/
+    
+    return noeud;
+}
+
+
+
+
 struct noeud* get_symbole_constante(struct tds* tds, float valeur)
 {
     for(int i = 0; i < tds->taille_max; i++) //parcourir chaque ligne de la tds
@@ -322,6 +416,26 @@ struct noeud* get_symbole_constante_int(struct tds* tds, int valeur)
             if(noeud->info.sorte == SORTE_CONSTANTE)
             {
 		    if(noeud->info.type == TYPE_INT && noeud->info.valeur_entiere == valeur) //noeud trouvé
+		    {
+		        //printf("Entrée %d non-vide : nom %s présent\n", indice, nom);
+		        return noeud; //noeud = noeud ayant la valeur "valeur"
+		    }
+	    }
+        }
+    }
+    return NULL; //aucune case avec la valeur en paramètre
+}
+
+
+struct noeud* get_symbole_constante_str(struct tds* tds, char valeur[MAX_LONGUEUR_VARIABLE])
+{
+    for(int i = 0; i < tds->taille_max; i++) //parcourir chaque ligne de la tds
+    {
+        for(struct noeud* noeud = tds->listes[i]; noeud != NULL; noeud = noeud->suivant) //parcourir chaque liste chainee de chaque ligne
+        {
+            if(noeud->info.sorte == SORTE_CONSTANTE)
+            {
+		    if(noeud->info.type == TYPE_STR && strcmp(noeud->info.valeur_str, valeur) == 0) //noeud trouvé
 		    {
 		        //printf("Entrée %d non-vide : nom %s présent\n", indice, nom);
 		        return noeud; //noeud = noeud ayant la valeur "valeur"
@@ -430,6 +544,8 @@ char* parser_enum_type(enum type type)
         return "INT";
     else if(type == TYPE_FLOAT)
         return "FLOAT";
+    else if(type == TYPE_STR)
+        return "STR";
     else if(type == TYPE_MATRIX)
     	return "MATRIX";
     else if(type == TYPE_ERROR)
@@ -443,8 +559,10 @@ void affichage_symbole(struct noeud* noeud)
 	{
 		if(noeud->info.type == TYPE_INT)
 			fprintf(output, "%d", noeud->info.valeur_entiere);
-        else if(noeud->info.type == TYPE_FLOAT)
+		else if(noeud->info.type == TYPE_FLOAT)
 			fprintf(output, "%f", noeud->info.valeur_flottante);
+		else if(noeud->info.type == TYPE_STR)
+			fprintf(output, "%s", noeud->info.valeur_str);
 	}
 	else
 	{
@@ -471,6 +589,8 @@ void affichage_tds(struct tds* tds)
 	    			fprintf(output, "|%s, %s, %s, %d|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type), temp->info.valeur_entiere);
         		else if(temp->info.type == TYPE_FLOAT)
 				    fprintf(output, "|%s, %s, %s, %f|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type), temp->info.valeur_flottante);
+			else if(temp->info.type == TYPE_STR)
+					fprintf(output, "|%s, %s, %s, %s|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type), temp->info.valeur_str);
 	    	}
 	    	else
 	        	fprintf(output, "|%s, %s, %s|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type));

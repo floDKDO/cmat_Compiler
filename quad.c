@@ -244,6 +244,16 @@ void affiche_quad(struct Quad* quad)
 			printf("(float)");
 			affichage_symbole(quad->arg1);
 			break;
+		case QOP_PRINTF:
+			printf("printf(");
+			affichage_symbole(quad->res);
+			printf(")");
+			break;
+		case QOP_PRINT:
+			printf("print(");
+			affichage_symbole(quad->res);
+			printf(")");
+			break;
 		
 		default:
 			break;
@@ -266,6 +276,47 @@ void affiche_quad_spim(struct Quad* quad)
 {
 	switch (quad->op)
 	{
+		case QOP_PRINTF:
+			fprintf(output, "\tla $a0 _%s\n", quad->res->info.nom);
+			fprintf(output, "\tli $v0, 4\n");
+			fprintf(output, "\tsyscall\n");
+			break;
+			
+		case QOP_PRINT:
+		
+			if (quad->res->info.sorte == SORTE_CONSTANTE) 
+			{
+				if (quad->res->info.type == TYPE_INT) 
+				{
+					fprintf(output, "\tli $a0 %d\n", quad->res->info.valeur_entiere);
+					fprintf(output, "\tli $v0, 1\n");
+				}
+				else if (quad->res->info.type == TYPE_FLOAT) 
+				{
+					fprintf(output, "\tli.s $f12 %f\n", quad->res->info.valeur_flottante);
+					fprintf(output, "\tli $v0, 2\n");
+				}
+			}
+			else if (quad->res->info.sorte == SORTE_VARIABLE) 
+			{
+				if (quad->res->info.type == TYPE_INT) 
+				{
+					fprintf(output, "\tlw $a0 _%s\n", quad->res->info.nom);
+					fprintf(output, "\tli $v0, 1\n");
+				}
+				else if (quad->res->info.type == TYPE_FLOAT) 
+				{
+					fprintf(output, "\tl.s $f12 _%s\n", quad->res->info.nom);
+					fprintf(output, "\tli $v0, 2\n");
+				}
+			}
+			
+			fprintf(output, "\tsyscall\n");
+			
+			//on ajoute un \n après un print
+			fprintf(output, "\n\tli $v0 4\n\tla $a0 newline\n\tsyscall\n");
+			break;
+	
 		case QOP_PRE_INCR:
 			if (quad->res->info.type == TYPE_INT) 
 			{
@@ -726,13 +777,20 @@ void affiche_data_spim()
 	    while(temp != NULL) 
 	    {
 	    	if(temp->info.sorte != SORTE_CONSTANTE) {
-				if (temp->info.type == TYPE_INT) {
-					fprintf(output, "_%s:\t.word %d\n", temp->info.nom, temp->info.valeur_entiere);
-				} else {
-					fprintf(output, "_%s:\t.float %f\n", temp->info.nom, temp->info.valeur_flottante);
-				}
+			if (temp->info.type == TYPE_INT) {
+				fprintf(output, "_%s:\t.word %d\n", temp->info.nom, temp->info.valeur_entiere);
+			} else if (temp->info.type == TYPE_FLOAT){
+				fprintf(output, "_%s:\t.float %f\n", temp->info.nom, temp->info.valeur_flottante);
+			}
 	    	}
-			temp = temp->suivant;
+	    	else
+	    	{
+	    		if(temp->info.type == TYPE_STR)
+			{
+				fprintf(output, "_%s:\t.asciiz %s\n", temp->info.nom, temp->info.valeur_str);
+			}
+	    	}
+		temp = temp->suivant;
 	    }
 	}
 }
