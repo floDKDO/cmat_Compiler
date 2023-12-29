@@ -51,7 +51,11 @@ enum QuadOp
 	QOP_GOTO,
 	QOP_CAST, //INT to FLOAT
 	QOP_PRINTF,
-	QOP_PRINT
+	QOP_PRINT,
+	QOP_IF,
+	QOP_HALF_IF,
+	QOP_ELSE_IF,
+	QOP_END_IF
 };
 
 struct Quad
@@ -68,6 +72,8 @@ struct Liste_Quad
 	int taille_max; //nb entrées max dans la liste de quads
 	int taille_actuelle; //nb d'entrées actuellement utilisées dans la liste de quads
 	unsigned int nextquad;
+	unsigned int compteur_label_else; //Else0:, Else1:, ...
+	unsigned int compteur_label_endif; //Endif0:, Endif1:, ...
 };
 
 

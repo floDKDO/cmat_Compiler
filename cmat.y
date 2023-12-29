@@ -70,7 +70,7 @@ int indice_tab_str = 0;
 %left '<' '>'
 %left LE GE 
 %left '+' '-'
-%left '*' '/' '%'
+%left '*' '/' '%' 
 %left UNARY INTERV_OP
 %right INCR DECR
 
@@ -103,8 +103,13 @@ instruction : declaration_variable ';'
 	    | RETURN C_INT ';'
 ;
 
-condition : IF '(' expression ')' corps {}
-        | IF '(' expression ')' corps ELSE corps
+partie_else : ELSE{gencode(liste_quad, QOP_ELSE_IF, NULL, NULL, NULL);} corps
+	| ELSE{gencode(liste_quad, QOP_ELSE_IF, NULL, NULL, NULL);} condition
+	| %empty {gencode(liste_quad, QOP_ELSE_IF, NULL, NULL, NULL);}
+	;
+
+
+condition : IF '(' expression {struct noeud* entree = get_symbole(tds, $3.ptr->info.nom); gencode(liste_quad, QOP_IF, NULL, NULL, entree);} ')' corps{gencode(liste_quad, QOP_HALF_IF, NULL, NULL, NULL);} partie_else{gencode(liste_quad, QOP_END_IF, NULL, NULL, NULL);}
 ;
 
 boucle : boucle_for | boucle_while
@@ -395,29 +400,43 @@ expression :
 			}
 		}
     | expression '>' expression {
-			if($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR) {
+			if($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR) 
+			{
 				$$.ptr = newtemp(&tds, TYPE_ERROR);
-			} else if($1.ptr->info.sorte == SORTE_TABLEAU || $3.ptr->info.sorte == SORTE_TABLEAU) {
+			} 
+			else if($1.ptr->info.sorte == SORTE_TABLEAU || $3.ptr->info.sorte == SORTE_TABLEAU) 
+			{
 				yyerror("> avec des tableaux/matrices");
 				$$.ptr = newtemp(&tds, TYPE_ERROR);
-			} else if($1.ptr->info.type == TYPE_FLOAT) {
+			} 
+			else if($1.ptr->info.type == TYPE_FLOAT) 
+			{
 				$$.ptr = newtemp(&tds, TYPE_INT);
-				if ($3.ptr->info.type == TYPE_INT) {
+				if ($3.ptr->info.type == TYPE_INT) 
+				{
 					struct noeud *tmp = newtemp(&tds, TYPE_FLOAT);
 					gencode(liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
 					gencode(liste_quad, QOP_GT, $1.ptr, tmp, $$.ptr);
-				} else {
+				} 
+				else 
+				{
 					gencode(liste_quad, QOP_GT, $1.ptr, $3.ptr, $$.ptr);
 				}
-			} else if ($3.ptr->info.type == TYPE_FLOAT){
+			} 
+			else if ($3.ptr->info.type == TYPE_FLOAT)
+			{
 				struct noeud *tmp = newtemp(&tds, TYPE_FLOAT);
 				gencode(liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
 				$$.ptr = newtemp(&tds, TYPE_INT);
 				gencode(liste_quad, QOP_GT, $1.ptr, tmp, $$.ptr);
-			} else if($1.ptr->info.type == TYPE_INT && $3.ptr->info.type == TYPE_INT) {
+			} 
+			else if($1.ptr->info.type == TYPE_INT && $3.ptr->info.type == TYPE_INT) 
+			{
 				$$.ptr = newtemp(&tds, TYPE_INT);
 				gencode(liste_quad, QOP_GT, $1.ptr, $3.ptr, $$.ptr);
-			} else {
+			} 
+			else 
+			{
 				$$.ptr = newtemp(&tds, TYPE_NONE);
 			}
 		}

@@ -7,6 +7,8 @@ struct Liste_Quad* creer_liste_quad(int taille_max)
     liste_quad->taille_max = taille_max;
     liste_quad->taille_actuelle = 0;
     liste_quad->nextquad = 0;
+    liste_quad->compteur_label_else = 0;
+    liste_quad->compteur_label_endif = 0;
     
     liste_quad->quads = malloc(taille_max * sizeof(struct Quad));
     
@@ -276,6 +278,32 @@ void affiche_quad_spim(struct Quad* quad)
 {
 	switch (quad->op)
 	{
+		case QOP_IF:
+			if(quad->res->info.type == TYPE_INT)
+			{
+				fprintf(output, "\tlw $t0, _%s\n", quad->res->info.nom);
+				fprintf(output, "\tbeq $t0 0 Else%u\n", liste_quad->compteur_label_else); //si la condition est fausse, ne pas exécuter le code du if
+			}
+			else if(quad->res->info.type == TYPE_FLOAT)
+			{
+				//TODO
+			}
+			break;
+			
+		case QOP_HALF_IF:
+			fprintf(output, "\tj Endif%d\n", liste_quad->compteur_label_endif);
+			break;
+			
+		case QOP_ELSE_IF:
+			fprintf(output, "Else%d:\n", liste_quad->compteur_label_else);
+			liste_quad->compteur_label_else += 1;
+			break;
+			
+		case QOP_END_IF:
+			fprintf(output, "Endif%d:\n", liste_quad->compteur_label_endif); //label
+			liste_quad->compteur_label_endif += 1;
+			break;
+	
 		case QOP_PRINTF:
 			fprintf(output, "\tla $a0 _%s\n", quad->res->info.nom);
 			fprintf(output, "\tli $v0, 4\n");
@@ -637,7 +665,19 @@ void affiche_quad_spim(struct Quad* quad)
 			fprintf(output, "\tsle $t2 $t0 $t1\n");
 			fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
 		} else {
-			//TODO
+			if (quad->arg1->info.sorte == SORTE_CONSTANTE)
+			{
+				fprintf(output, "\tli.s $f0 %f\n", quad->arg1->info.valeur_flottante);
+			} else {
+				fprintf(output, "\tl.s $f0 _%s\n", quad->arg1->info.nom);
+			}
+			if (quad->arg2->info.sorte == SORTE_CONSTANTE)
+			{
+				fprintf(output, "\tli.s $f1 %f\n", quad->arg2->info.valeur_flottante);
+			} else {
+				fprintf(output, "\tl.s $f1 _%s\n", quad->arg2->info.nom);
+			}
+			fprintf(output, "\t c.le.s $f0 $f1\n");
 		}
 		break;
 	case QOP_LT:
@@ -658,7 +698,19 @@ void affiche_quad_spim(struct Quad* quad)
 			fprintf(output, "\tslt $t2 $t0 $t1\n");
 			fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
 		} else {
-			//TODO
+			if (quad->arg1->info.sorte == SORTE_CONSTANTE)
+			{
+				fprintf(output, "\tli.s $f0 %f\n", quad->arg1->info.valeur_flottante);
+			} else {
+				fprintf(output, "\tl.s $f0 _%s\n", quad->arg1->info.nom);
+			}
+			if (quad->arg2->info.sorte == SORTE_CONSTANTE)
+			{
+				fprintf(output, "\tli.s $f1 %f\n", quad->arg2->info.valeur_flottante);
+			} else {
+				fprintf(output, "\tl.s $f1 _%s\n", quad->arg2->info.nom);
+			}
+			fprintf(output, "\t c.lt.s $f0 $f1\n");
 		}
 		break;
 	case QOP_GE:
@@ -718,10 +770,25 @@ void affiche_quad_spim(struct Quad* quad)
 			} else {
 				fprintf(output, "\tlw $t1 _%s\n", quad->arg2->info.nom);
 			}
+			
+			//fprintf(output, "Valeureee : %d et %s\n", quad->op,quad->res->info.nom);
+			
 			fprintf(output, "\tseq $t2 $t0 $t1\n");
 			fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
 		} else {
-			//TODO
+			if (quad->arg1->info.sorte == SORTE_CONSTANTE)
+			{
+				fprintf(output, "\tli.s $f0 %f\n", quad->arg1->info.valeur_flottante);
+			} else {
+				fprintf(output, "\tl.s $f0 _%s\n", quad->arg1->info.nom);
+			}
+			if (quad->arg2->info.sorte == SORTE_CONSTANTE)
+			{
+				fprintf(output, "\tli.s $f1 %f\n", quad->arg2->info.valeur_flottante);
+			} else {
+				fprintf(output, "\tl.s $f1 _%s\n", quad->arg2->info.nom);
+			}
+			fprintf(output, "\t c.eq.s $f0 $f1\n");
 		}
 		break;
 	case QOP_NE:

@@ -14,6 +14,29 @@ int main()
 	print(41);
 	print(sol);
 	
+	int test = 42;
+	
+	if(test < 42)
+	{
+		printf("oui\n");
+	}
+	else if(test != 42)
+	{
+		printf("NON\n");
+	}
+	else 
+	{
+		printf("TEST\n");
+	}
+	
+	if(test == 41)
+	{
+		printf("ok\n");
+	}
+	else
+	{
+		printf("blabla\n");
+	}
+	
 	return 0;
 }
-
