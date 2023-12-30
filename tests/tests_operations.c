@@ -48,8 +48,11 @@ int main()
 		printf("TITI\n");
 	}
 	
-	int titi = 12;
-	print(titi);
+	while(test > 30)
+	{
+		print(test);
+		test = test - 1;
+	}
 	
 	return 0;
 }

@@ -280,6 +280,22 @@ void affiche_quad_spim(struct Quad* quad)
 {
 	switch (quad->op)
 	{
+		case QOP_WHILE:
+			fprintf(output, "Loop%d:\n", liste_quad->compteur_label_loop);
+			break;
+			
+		case QOP_HALF_WHILE:
+			fprintf(output, "\tlw $t0, _%s\n", quad->res->info.nom);
+			fprintf(output, "\tbeq $t0 0 End_Loop%d\n", liste_quad->compteur_label_endloop);
+			break;
+			
+		case QOP_END_WHILE:
+			fprintf(output, "\tj Loop%d\n", liste_quad->compteur_label_loop);
+			fprintf(output, "End_Loop%d:\n", liste_quad->compteur_label_endloop);
+			liste_quad->compteur_label_loop += 1;
+    			liste_quad->compteur_label_endloop += 1;
+			break;
+	
 		case QOP_FOR:
 			fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere); //valeur de l'itérateur
 			fprintf(output, "\tsw $t0 _%s\n", quad->res->info.nom); //mettre la valeur dans i => int i = 5; mettre la valeur 5 dans i
@@ -467,7 +483,7 @@ void affiche_quad_spim(struct Quad* quad)
 				fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
 			}
 			if (quad->arg2->info.sorte == SORTE_CONSTANTE) {
-				fprintf(output, "\tli $t0 %d\n", quad->arg2->info.valeur_entiere);
+				fprintf(output, "\tli $t1 %d\n", quad->arg2->info.valeur_entiere);
 			} else {
 				fprintf(output, "\tlw $t1 _%s\n", quad->arg2->info.nom);
 			}
@@ -515,7 +531,7 @@ void affiche_quad_spim(struct Quad* quad)
 				fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
 			}
 			if (quad->arg2->info.sorte == SORTE_CONSTANTE) {
-				fprintf(output, "\tli $t0 %d\n", quad->arg2->info.valeur_entiere);
+				fprintf(output, "\tli $t1 %d\n", quad->arg2->info.valeur_entiere);
 			} else {
 				fprintf(output, "\tlw $t1 _%s\n", quad->arg2->info.nom);
 			}
@@ -544,7 +560,7 @@ void affiche_quad_spim(struct Quad* quad)
 				fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
 			}
 			if (quad->arg2->info.sorte == SORTE_CONSTANTE) {
-				fprintf(output, "\tli $t0 %d\n", quad->arg2->info.valeur_entiere);
+				fprintf(output, "\tli $t1 %d\n", quad->arg2->info.valeur_entiere);
 			} else {
 				fprintf(output, "\tlw $t1 _%s\n", quad->arg2->info.nom);
 			}

@@ -138,7 +138,17 @@ boucle_for : FOR '(' type IDENT {struct noeud* entree = get_symbole(tds, $4);
 ';' expression {gencode(liste_quad, QOP_HALF_FOR, NULL, NULL, $10.ptr);} ';' incr_et_decr ')' corps{gencode(liste_quad, QOP_END_FOR, NULL, NULL, NULL);}
 ;
 
-boucle_while : WHILE '(' expression ')' corps
+boucle_while : WHILE '(' {gencode(liste_quad, QOP_WHILE, NULL, NULL, NULL);} expression {
+			struct noeud* entree = get_symbole(tds, $4.ptr->info.nom); 
+			if(entree == NULL) 
+			{
+				char err_msg[MAX_LENGTH_VAR_NAME + 20];
+				sprintf(err_msg, "Undeclared name : '%s'", $4.ptr->info.nom);
+				yyerror(err_msg);
+				entree = insertion(&tds, $4.ptr->info.nom, SORTE_NONE, TYPE_ERROR);
+			}
+               }
+ ')' {gencode(liste_quad, QOP_HALF_WHILE, NULL, NULL, $4.ptr);} corps{gencode(liste_quad, QOP_END_WHILE, NULL, NULL, NULL);}
 ;
 
 

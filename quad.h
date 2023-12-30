@@ -58,7 +58,10 @@ enum QuadOp
 	QOP_END_IF,
 	QOP_FOR,
 	QOP_HALF_FOR,
-	QOP_END_FOR
+	QOP_END_FOR,
+	QOP_WHILE,
+	QOP_HALF_WHILE,
+	QOP_END_WHILE
 };
 
 struct Quad
