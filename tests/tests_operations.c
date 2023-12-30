@@ -16,7 +16,7 @@ int main()
 	
 	int test = 42;
 	
-	if(test < 42)
+	if(test == 43)
 	{
 		printf("oui\n");
 	}
@@ -37,6 +37,19 @@ int main()
 	{
 		printf("blabla\n");
 	}
+	
+	for(int i = 10; i > 5; --i)
+	{
+		printf("TOTO\n");
+	}
+	
+	for(int j = 0; j < 10; j++)
+	{
+		printf("TITI\n");
+	}
+	
+	int titi = 12;
+	print(titi);
 	
 	return 0;
 }

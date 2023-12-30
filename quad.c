@@ -9,6 +9,8 @@ struct Liste_Quad* creer_liste_quad(int taille_max)
     liste_quad->nextquad = 0;
     liste_quad->compteur_label_else = 0;
     liste_quad->compteur_label_endif = 0;
+    liste_quad->compteur_label_loop = 0;
+    liste_quad->compteur_label_endloop = 0;
     
     liste_quad->quads = malloc(taille_max * sizeof(struct Quad));
     
@@ -278,6 +280,25 @@ void affiche_quad_spim(struct Quad* quad)
 {
 	switch (quad->op)
 	{
+		case QOP_FOR:
+			fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere); //valeur de l'itérateur
+			fprintf(output, "\tsw $t0 _%s\n", quad->res->info.nom); //mettre la valeur dans i => int i = 5; mettre la valeur 5 dans i
+			fprintf(output, "Loop%d:\n", liste_quad->compteur_label_loop);
+			break;
+			
+		case QOP_HALF_FOR:
+			//quad->res->info.valeur_entiere : 0 ou 1 selon que la condition soit vraie ou pas => si = 0, fin de la boucle
+			fprintf(output, "\tlw $t0, _%s\n", quad->res->info.nom);
+			fprintf(output, "\tbeq $t0 0 End_Loop%d\n", liste_quad->compteur_label_endloop);
+			break;
+			
+		case QOP_END_FOR:
+			fprintf(output, "\tj Loop%d\n", liste_quad->compteur_label_loop);
+			fprintf(output, "End_Loop%d:\n", liste_quad->compteur_label_endloop);
+			liste_quad->compteur_label_loop += 1;
+    			liste_quad->compteur_label_endloop += 1;
+			break;
+	
 		case QOP_IF:
 			if(quad->res->info.type == TYPE_INT)
 			{

@@ -55,7 +55,10 @@ enum QuadOp
 	QOP_IF,
 	QOP_HALF_IF,
 	QOP_ELSE_IF,
-	QOP_END_IF
+	QOP_END_IF,
+	QOP_FOR,
+	QOP_HALF_FOR,
+	QOP_END_FOR
 };
 
 struct Quad
@@ -74,6 +77,8 @@ struct Liste_Quad
 	unsigned int nextquad;
 	unsigned int compteur_label_else; //Else0:, Else1:, ...
 	unsigned int compteur_label_endif; //Endif0:, Endif1:, ...
+	unsigned int compteur_label_loop; //Loop:, Loop1:, ...
+	unsigned int compteur_label_endloop; //End_Loop0:, End_Loop1:, ...
 };
 
 

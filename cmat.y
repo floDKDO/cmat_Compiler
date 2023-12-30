@@ -3,7 +3,7 @@
 extern int yylex();
 void yyerror(const char* msg);
 
-int syntaxe_error = 0;
+int syntax_error = 0;
 
 int indice_tab_str = 0;
 
@@ -82,7 +82,7 @@ int indice_tab_str = 0;
 %% //grammaire temporaire
 
 //Créer une liste de declaration_fonction si on ajoute les fonction en dehors du main
-programme : main {return syntaxe_error;}
+programme : main {return syntax_error;}
 ;
 
 main : INT MAIN '(' ')' corps
@@ -123,7 +123,19 @@ initial_declaration : declaration_variable | liste_operation
 ;*/
 
 // Boucle for moins poussée
-boucle_for : FOR '(' type IDENT '=' expression ';' expression ';' incr_et_decr ')' corps
+boucle_for : FOR '(' type IDENT {struct noeud* entree = get_symbole(tds, $4); 
+			if(entree == NULL) {
+				entree = insertion(&tds, $4, SORTE_VARIABLE, $3); $<exprval>$.ptr = entree; /* $$ = noeud entrée */
+				$<exprval>$.ptr = entree; /* $$ = noeud entrée */
+			}
+			else 
+			{
+				fprintf(stderr,"Previous declaration of %s exists\n", $4); 
+               	 	exit(1);
+               	}
+} 
+'=' expression {struct noeud* entree = get_symbole(tds, $7.ptr->info.nom); gencode(liste_quad, QOP_FOR, entree, NULL, $<exprval>5.ptr);}
+';' expression {gencode(liste_quad, QOP_HALF_FOR, NULL, NULL, $10.ptr);} ';' incr_et_decr ')' corps{gencode(liste_quad, QOP_END_FOR, NULL, NULL, NULL);}
 ;
 
 boucle_while : WHILE '(' expression ')' corps
@@ -806,6 +818,6 @@ assign : '=' {$$ = QOP_ASSIGN;}
 
 void yyerror(const char* msg)
 {
-    syntaxe_error = 1;
-	fprintf(stderr, "Syntaxe error : %s\n", msg);
+    syntax_error = 1;
+	fprintf(stderr, "Syntax error : %s\n", msg);
 }
