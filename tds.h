@@ -54,6 +54,7 @@ struct info //infos sur un identificateur
 	    {
 	        int nombre_dimension;
 	        int taille_dimensions[MAX_DIMENSION_TABLEAU]; //taille de chaque dimension : ex -> int tab[2][3]; => nombre_dimension = 2, et taille_dimensions[0] = 2 et taille_dimensions[1] = 3
+	        int* valeurs_entieres_tableau;
 	    } tableau; //tableau (hors matrix)
 	    
 	    struct matrix
@@ -93,6 +94,8 @@ struct noeud* get_elem(struct noeud* tete, char* nom) ;
 struct noeud* ajout_queue(struct noeud* tete, struct noeud* new_queue);
 
 struct noeud* insertion(struct tds** tds, char* nom, enum sorte sorte, enum type type);
+
+struct noeud* insertion_tableau(struct tds** tds, char* nom, enum type type, int nombre_dimension, int taille_dimensions[MAX_DIMENSION_TABLEAU]);
 
 struct noeud* insertion_constante(struct tds** tds, enum type type, float valeur);
 struct noeud* insertion_constante_str(struct tds** tds, enum type type, char valeur[MAX_LONGUEUR_VARIABLE]);

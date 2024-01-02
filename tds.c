@@ -205,6 +205,100 @@ struct noeud* insertion(struct tds** tds, char* nom, enum sorte sorte, enum type
 }
 
 
+struct noeud* insertion_tableau(struct tds** tds, char* nom, enum type type, int nombre_dimension, int taille_dimensions[MAX_DIMENSION_TABLEAU])
+{
+    int indice = fonctionHash(nom, (*tds)->taille_max);
+    
+    //info : il n'est pas nécessaire de regarder chaque entrée de la table des symboles pour vérifier si nom n'est pas déjà présent
+    //       car la fonction de hash nous donnerait le même indice pour le même nom
+    
+    struct noeud* noeud = NULL;
+    
+    /*printf("Insertion tableau de dimension %d et les dimensions ont la taille : ", nombre_dimension);
+    for(int i = 0; i < nombre_dimension; i++)
+	{
+		printf("Dim%d : %d ", i+1, taille_dimensions[i]);
+	}
+	printf("\n");*/
+    
+    
+    //cas 1 : ajout dans une entrée vide
+    if((*tds)->listes[indice] == NULL)
+    {
+        //printf("ENTREE %d VIDE : AJOUT DE %s DANS LA TABLE\n", indice, nom);
+        
+        //créer l'entrée
+        NCHK(noeud = malloc(sizeof(struct noeud)));
+        noeud->suivant = NULL;
+        
+        NCHK(noeud->info.nom = malloc(MAX_LONGUEUR_VARIABLE * sizeof(char)));
+        snprintf(noeud->info.nom, MAX_LONGUEUR_VARIABLE, "%s", nom);
+        noeud->info.sorte = SORTE_TABLEAU;
+        noeud->info.type = type;
+        noeud->info.valeur_entiere = 0;
+        noeud->info.valeur_flottante = 0.0;
+        noeud->info.tableau.nombre_dimension = nombre_dimension;
+        noeud->info.tableau.valeurs_entieres_tableau = calloc(taille_dimensions[0], sizeof(int));
+        
+        for(int i = 0; i < nombre_dimension; i++)
+        {
+        	noeud->info.tableau.taille_dimensions[i] = taille_dimensions[i];
+        }
+        
+        (*tds)->listes[indice] = noeud;
+        (*tds)->taille_actuelle += 1;
+    }
+    else //cas 2 : ajout dans une entrée non vide
+    {
+        //parcourir la liste chainée de l'entrée et regarder si la clef est déjà présente
+        struct noeud* eventuel_noeud = get_elem((*tds)->listes[indice], nom);
+        
+        if(eventuel_noeud != NULL) //différent de NULL => noeud trouvé
+        {
+            //printf("NOM : %s DEJA PRESENT A l'ENTREE %d, MISE A JOUR !\n", nom, indice);
+            
+            //le modifier
+            eventuel_noeud->info.type = type;
+        }
+        else
+        {
+            //printf("PAS PRESENT : AJOUT DE %s DANS LA TABLE A L'ENTREE %d\n", nom, indice);
+            
+            //créer l'entrée
+            NCHK(noeud = malloc(sizeof(struct noeud)));
+            noeud->suivant = NULL;
+            NCHK(noeud->info.nom = malloc(MAX_LONGUEUR_VARIABLE * sizeof(char)));
+            snprintf(noeud->info.nom, MAX_LONGUEUR_VARIABLE, "%s", nom);
+            noeud->info.sorte = SORTE_TABLEAU;
+            noeud->info.type = type;
+	     noeud->info.valeur_entiere = 0;
+	     noeud->info.valeur_flottante = 0.0;
+	     noeud->info.tableau.nombre_dimension = nombre_dimension;
+	     noeud->info.tableau.valeurs_entieres_tableau = calloc(taille_dimensions[0], sizeof(int));
+        
+		for(int i = 0; i < nombre_dimension; i++)
+		{
+			noeud->info.tableau.taille_dimensions[i] = taille_dimensions[i];
+		}
+            
+            (*tds)->listes[indice] = ajout_queue((*tds)->listes[indice], noeud);
+            (*tds)->taille_actuelle += 1;
+        }
+    }
+    
+    /*float load_factor = (float)((*tds)->taille_actuelle) / (float)((*tds)->taille_max); //obtenir le résultat de la division en nombres flottants
+    //printf("LOAD FACTOR : %f\n", load_factor);
+    if(load_factor >= 0.75)
+    {
+        printf("REHASHING REQUIS\n");
+        rehashing(tds);
+        int indice = fonctionHash(nom, (*tds)->taille_max);
+        noeud = get_symbole(*tds, nom);
+    }*/
+    
+    return noeud;
+}
+
 
 struct noeud* insertion_constante(struct tds** tds, enum type type, float valeur) //float pour gérer float et int
 {

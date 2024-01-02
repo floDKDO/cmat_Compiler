@@ -54,5 +54,13 @@ int main()
 		test = test - 1;
 	}
 	
+	int abc = 44;
+	
+	int tab[4] = {1, 2, 3, 4};
+	
+	int bcd = tab[2];
+	
+	print(bcd);
+	
 	return 0;
 }

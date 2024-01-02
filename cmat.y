@@ -21,6 +21,9 @@ int indice_tab_str = 0;
 	struct u_tab {
 		enum type type_tab;
 		int nDim;
+		int tailleDim;
+		int taillesDim[MAX_DIMENSION_TABLEAU];
+		int listeValeursEntieres[64];
 	} tableau;
 	
 	enum QuadOp op;
@@ -31,7 +34,10 @@ int indice_tab_str = 0;
 	int constante_entiere;
 	char constante_caractere[MAX_LONGUEUR_VARIABLE];
 	
+	
+	
 	struct {
+		int indice_demande; //si tableau
 		struct noeud* ptr;
 	} exprval;
 	
@@ -52,7 +58,7 @@ int indice_tab_str = 0;
 %token <nom> IDENT
 %type <nom> variable_declaree
 %token <op> INCR DECR
-%type <tableau> intervalle_dimension valeur_tableau liste_tableau liste_nombre rangee liste_rangee
+%type <tableau> intervalle_dimension liste_tableau liste_nombre rangee liste_rangee liste_entiers valeur_tableau
 %type <op> assign
 %token <constante_entiere> C_INT 
 %token <constante_flottante> C_FLOAT
@@ -154,11 +160,14 @@ boucle_while : WHILE '(' {gencode(liste_quad, QOP_WHILE, NULL, NULL, NULL);} exp
 
 declaration_variable : type liste_variable_declaree 
 	{
-		for(int i = 0; i < indice_tab_str; i++) { //mettre le type dans la tds
+		for(int i = 0; i < indice_tab_str; i++) 
+		{ //mettre le type dans la tds
 			struct noeud* noeud = get_symbole(tds, $2[i]);
 			if(noeud != NULL)
 				noeud->info.type = $1;
-			}
+		}
+
+		
 	}
 ;
 
@@ -170,18 +179,48 @@ variable_declaree :
 	IDENT {struct noeud* entree = insertion(&tds, $1, SORTE_VARIABLE, TYPE_NONE); /*strcpy($$, $1);*/}
     | IDENT '=' expression {
 			struct noeud* entree = insertion(&tds, $1, SORTE_VARIABLE, TYPE_NONE);
-            
             if(entree == NULL) {
                 fprintf(stderr,"Previous declaration of %s exists\n", $1); 
                 exit(1);
             }
-            
+        		
+        	if($3.ptr->info.sorte == SORTE_TABLEAU)
+        	{			
+			struct noeud* indice = get_symbole_constante_int(tds, $3.indice_demande);
+			gencode(liste_quad, QOP_ASSIGN, $3.ptr, indice, entree);
+        	}
+        	else
+        	{
 			gencode(liste_quad, QOP_ASSIGN, $3.ptr, NULL, entree);
+		}
 			
 			//strcpy($$, $1);
 		}
-    | IDENT intervalle_dimension {}
-    | IDENT intervalle_dimension '=' valeur_tableau {}
+    | IDENT intervalle_dimension {struct noeud* entree = insertion_tableau(&tds, $1, TYPE_NONE, $2.nDim, $2.taillesDim); 
+    
+    		if(entree == NULL) {
+                fprintf(stderr,"Previous declaration of %s exists\n", $1); 
+                exit(1);
+            }}
+    | IDENT intervalle_dimension '=' valeur_tableau {struct noeud* entree = insertion_tableau(&tds, $1, TYPE_NONE, $2.nDim, $2.taillesDim); 
+    
+    		if(entree == NULL) 
+    		{
+               	fprintf(stderr,"Previous declaration of %s exists\n", $1); 
+                	exit(1);
+		}
+            
+            //taille dimension 1
+            for(int i = 0; i < $2.taillesDim[0]; i++)
+            {
+            	entree->info.tableau.valeurs_entieres_tableau[i] = $4.listeValeursEntieres[i];
+            }
+            
+            //que INT
+            entree->info.type = TYPE_INT;
+            
+            gencode(liste_quad, QOP_ASSIGN_TAB, NULL, NULL, entree);
+}
 ;
 
 
@@ -670,15 +709,15 @@ expression :
 				$$.ptr = newtemp(&tds, TYPE_NONE);
 			}
 		}
-    /*| '*' expression %prec UNARY    //On fait les pointeurs ?
+    /*| '*' expression %prec UNARY   
     | '&' expression %prec UNARY*/
     | '(' expression ')' {$$ = $2;}
 ;
 
        
 intervalle_dimension : 
-	intervalle_dimension '[' liste_rangee ']' {$$.nDim = $1.nDim + 1;}
-    | '[' liste_rangee ']' {$$.type_tab = $2.type_tab; $$.nDim = 1;}
+	intervalle_dimension '[' liste_rangee ']' {$$.nDim = $1.nDim + 1; $$.taillesDim[0] = $1.tailleDim; $$.taillesDim[1] = $3.tailleDim;} 
+    | '[' liste_rangee ']' {$$.type_tab = $2.type_tab; $$.nDim = 1; $$.tailleDim = $2.tailleDim; $$.taillesDim[0] = $2.tailleDim;} 
 ;
 
 liste_rangee : 
@@ -688,10 +727,10 @@ liste_rangee :
 
 rangee : '*' {$$.type_tab = TYPE_MATRIX; /*Matrix exclusivement*/} 
         | expression INTERV_OP expression {}
-        | expression {}
+        | expression {$$.tailleDim = $1.ptr->info.valeur_entiere;}
 ;
 
-valeur_tableau : '{' liste_nombre '}' {$$ = $2; $$.nDim = 1;}
+valeur_tableau : '{' liste_nombre '}' {memcpy($$.listeValeursEntieres, $2.listeValeursEntieres, 64*sizeof(int));/*$$ = $2; $$.nDim = 1;*/}
 		| '{' liste_tableau '}' {$$ = $2; $$.nDim = $2.nDim + 1;}
 ;
 		
@@ -703,10 +742,12 @@ liste_tableau : liste_tableau ',' valeur_tableau {$$.nDim = ($1.nDim >= $3.nDim 
 liste_nombre : liste_entiers {$$.type_tab = TYPE_INT;} | liste_flottants {$$.type_tab = TYPE_FLOAT;}
 ;
 
-liste_flottants : liste_flottants ',' C_FLOAT | C_FLOAT
+liste_flottants : liste_flottants ',' constante_flottante
+		 | constante_flottante
 ;
 
-liste_entiers : liste_entiers ',' C_INT | C_INT 
+liste_entiers : liste_entiers ',' constante_entiere {/*tab[1], ...*/ static int indice = 1; $$.listeValeursEntieres[indice] = $3; indice += 1;}
+		| constante_entiere {/*tab[0]*/ $$.listeValeursEntieres[0] = $1;}
 ;
 
 type : INT {$$ = TYPE_INT;} | FLOAT {$$ = TYPE_FLOAT;} | MATRIX {$$ = TYPE_MATRIX;}
@@ -731,7 +772,16 @@ valeur :
 			struct noeud* entree = get_symbole_constante(tds, $1);	
 			$$.ptr = entree;
 		}
-    | IDENT intervalle_dimension {} 
+    | IDENT intervalle_dimension {
+    			struct noeud* entree = get_symbole(tds, $1); //tableau récupéré
+			if(entree == NULL) {
+				char err_msg[MAX_LENGTH_VAR_NAME + 20];
+				sprintf(err_msg, "Undeclared name : '%s'", $1);
+				yyerror(err_msg);
+				entree = insertion(&tds, $1, SORTE_NONE, TYPE_ERROR);
+			}
+			$$.indice_demande = $2.tailleDim; 
+			$$.ptr = entree;}
     | incr_et_decr {
 			struct noeud* entree = get_symbole(tds, $1.ptr->info.nom); 
 		    if(entree == NULL) {
