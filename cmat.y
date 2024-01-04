@@ -24,6 +24,7 @@ int indice_tab_str = 0;
 		int tailleDim;
 		int taillesDim[MAX_DIMENSION_TABLEAU];
 		int listeValeursEntieres[64];
+		float listeValeursFlottantes[64];
 	} tableau;
 	
 	enum QuadOp op;
@@ -58,7 +59,7 @@ int indice_tab_str = 0;
 %token <nom> IDENT
 %type <nom> variable_declaree
 %token <op> INCR DECR
-%type <tableau> intervalle_dimension liste_tableau liste_nombre rangee liste_rangee liste_entiers valeur_tableau
+%type <tableau> intervalle_dimension liste_tableau liste_nombre rangee liste_rangee liste_entiers liste_flottants valeur_tableau
 %type <op> assign
 %token <constante_entiere> C_INT 
 %token <constante_flottante> C_FLOAT
@@ -166,8 +167,6 @@ declaration_variable : type liste_variable_declaree
 			if(noeud != NULL)
 				noeud->info.type = $1;
 		}
-
-		
 	}
 ;
 
@@ -178,15 +177,23 @@ liste_variable_declaree : liste_variable_declaree ',' variable_declaree {strcpy(
 variable_declaree : 
 	IDENT {struct noeud* entree = insertion(&tds, $1, SORTE_VARIABLE, TYPE_NONE); /*strcpy($$, $1);*/}
     | IDENT '=' expression {
-			struct noeud* entree = insertion(&tds, $1, SORTE_VARIABLE, TYPE_NONE);
+    
+		struct noeud* entree = insertion(&tds, $1, SORTE_VARIABLE, TYPE_NONE);
             if(entree == NULL) {
                 fprintf(stderr,"Previous declaration of %s exists\n", $1); 
                 exit(1);
             }
         		
         	if($3.ptr->info.sorte == SORTE_TABLEAU)
-        	{			
-			struct noeud* indice = get_symbole_constante_int(tds, $3.indice_demande);
+        	{		
+        		struct noeud* indice;
+        		//if($3.ptr->info.type == TYPE_INT)
+				indice = get_symbole_constante_int(tds, $3.indice_demande);
+			/*else if($3.ptr->info.type == TYPE_FLOAT)
+			{
+				indice = get_symbole_constante(tds, $3.indice_demande);
+			}*/
+				
 			gencode(liste_quad, QOP_ASSIGN, $3.ptr, indice, entree);
         	}
         	else
@@ -202,22 +209,32 @@ variable_declaree :
                 fprintf(stderr,"Previous declaration of %s exists\n", $1); 
                 exit(1);
             }}
-    | IDENT intervalle_dimension '=' valeur_tableau {struct noeud* entree = insertion_tableau(&tds, $1, TYPE_NONE, $2.nDim, $2.taillesDim); 
+    | IDENT intervalle_dimension '=' valeur_tableau {
+    
+    		struct noeud* entree = insertion_tableau(&tds, $1, $4.type_tab, $2.nDim, $2.taillesDim); 
     
     		if(entree == NULL) 
     		{
                	fprintf(stderr,"Previous declaration of %s exists\n", $1); 
                 	exit(1);
 		}
-            
-            //taille dimension 1
-            for(int i = 0; i < $2.taillesDim[0]; i++)
-            {
-            	entree->info.tableau.valeurs_entieres_tableau[i] = $4.listeValeursEntieres[i];
-            }
-            
-            //que INT
-            entree->info.type = TYPE_INT;
+		
+		if(entree->info.type == TYPE_INT)
+		{
+			//taille dimension 1
+		    for(int i = 0; i < $2.taillesDim[0]; i++)
+		    {
+		    	entree->info.tableau.valeurs_entieres_tableau[i] = $4.listeValeursEntieres[i];
+		    }
+		}
+		else if(entree->info.type == TYPE_FLOAT)
+		{
+			//taille dimension 1
+		    for(int i = 0; i < $2.taillesDim[0]; i++)
+		    {
+		    	entree->info.tableau.valeurs_flottantes_tableau[i] = $4.listeValeursFlottantes[i];
+		    }
+		}
             
             gencode(liste_quad, QOP_ASSIGN_TAB, NULL, NULL, entree);
 }
@@ -726,11 +743,20 @@ liste_rangee :
 ;
 
 rangee : '*' {$$.type_tab = TYPE_MATRIX; /*Matrix exclusivement*/} 
-        | expression INTERV_OP expression {}
-        | expression {$$.tailleDim = $1.ptr->info.valeur_entiere;}
+        | expression INTERV_OP expression {$$.type_tab = TYPE_NONE;}
+        | expression {$$.tailleDim = $1.ptr->info.valeur_entiere; $$.type_tab = TYPE_NONE;}
 ;
 
-valeur_tableau : '{' liste_nombre '}' {memcpy($$.listeValeursEntieres, $2.listeValeursEntieres, 64*sizeof(int));/*$$ = $2; $$.nDim = 1;*/}
+valeur_tableau : '{' liste_nombre '}' {$$.type_tab = $2.type_tab; 
+					
+					if($2.type_tab == TYPE_INT)
+						memcpy($$.listeValeursEntieres, $2.listeValeursEntieres, 64*sizeof(int));
+					else if($2.type_tab == TYPE_FLOAT)
+						memcpy($$.listeValeursFlottantes, $2.listeValeursFlottantes, 64*sizeof(float));
+					
+					/*$$ = $2; $$.nDim = 1;*/
+					
+					}
 		| '{' liste_tableau '}' {$$ = $2; $$.nDim = $2.nDim + 1;}
 ;
 		
@@ -742,8 +768,8 @@ liste_tableau : liste_tableau ',' valeur_tableau {$$.nDim = ($1.nDim >= $3.nDim 
 liste_nombre : liste_entiers {$$.type_tab = TYPE_INT;} | liste_flottants {$$.type_tab = TYPE_FLOAT;}
 ;
 
-liste_flottants : liste_flottants ',' constante_flottante
-		 | constante_flottante
+liste_flottants : liste_flottants ',' constante_flottante {/*tab[1], ...*/ static int indice = 1; $$.listeValeursFlottantes[indice] = $3; indice += 1;}
+		 | constante_flottante {/*tab[0]*/ $$.listeValeursFlottantes[0] = $1;}
 ;
 
 liste_entiers : liste_entiers ',' constante_entiere {/*tab[1], ...*/ static int indice = 1; $$.listeValeursEntieres[indice] = $3; indice += 1;}

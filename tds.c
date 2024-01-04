@@ -239,6 +239,7 @@ struct noeud* insertion_tableau(struct tds** tds, char* nom, enum type type, int
         noeud->info.valeur_flottante = 0.0;
         noeud->info.tableau.nombre_dimension = nombre_dimension;
         noeud->info.tableau.valeurs_entieres_tableau = calloc(taille_dimensions[0], sizeof(int));
+        noeud->info.tableau.valeurs_flottantes_tableau = calloc(taille_dimensions[0], sizeof(float));
         
         for(int i = 0; i < nombre_dimension; i++)
         {
@@ -275,6 +276,7 @@ struct noeud* insertion_tableau(struct tds** tds, char* nom, enum type type, int
 	     noeud->info.valeur_flottante = 0.0;
 	     noeud->info.tableau.nombre_dimension = nombre_dimension;
 	     noeud->info.tableau.valeurs_entieres_tableau = calloc(taille_dimensions[0], sizeof(int));
+	     noeud->info.tableau.valeurs_flottantes_tableau = calloc(taille_dimensions[0], sizeof(float));
         
 		for(int i = 0; i < nombre_dimension; i++)
 		{

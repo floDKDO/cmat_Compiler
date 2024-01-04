@@ -55,6 +55,7 @@ struct info //infos sur un identificateur
 	        int nombre_dimension;
 	        int taille_dimensions[MAX_DIMENSION_TABLEAU]; //taille de chaque dimension : ex -> int tab[2][3]; => nombre_dimension = 2, et taille_dimensions[0] = 2 et taille_dimensions[1] = 3
 	        int* valeurs_entieres_tableau;
+	        float* valeurs_flottantes_tableau;
 	    } tableau; //tableau (hors matrix)
 	    
 	    struct matrix

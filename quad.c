@@ -582,6 +582,7 @@ void affiche_quad_spim(struct Quad* quad)
 		}
 		break;
 	case QOP_ASSIGN:
+		//printf("Mon type : %d et %d\n", quad->arg1->info.type, quad->res->info.type);
 		if (quad->res->info.type == TYPE_INT) {
 			if (quad->arg1->info.sorte == SORTE_CONSTANTE) {
 				fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
@@ -599,13 +600,23 @@ void affiche_quad_spim(struct Quad* quad)
 				fprintf(output, "\tsw $t1 _%s\n", quad->res->info.nom);
 			}
 			
-		} else {
+		} 
+		else if (quad->res->info.type == TYPE_FLOAT) {
 			if (quad->arg1->info.sorte == SORTE_CONSTANTE) {
 				fprintf(output, "\tli.s $f0 %f\n", quad->arg1->info.valeur_flottante);
-			} else {
+				fprintf(output, "\ts.s $f0 _%s\n", quad->res->info.nom);
+			} else if (quad->arg1->info.sorte == SORTE_VARIABLE) {
 				fprintf(output, "\tl.s $f0 _%s\n", quad->arg1->info.nom);
+				fprintf(output, "\ts.s $f0 _%s\n", quad->res->info.nom);
 			}
-			fprintf(output, "\ts.s $f0 _%s\n", quad->res->info.nom);
+			else if (quad->arg1->info.sorte == SORTE_TABLEAU) 
+			{
+				int offset = quad->arg2->info.valeur_entiere*4;
+				
+				fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
+				fprintf(output, "\tl.s $f1 %d($t0)\n", offset);
+				fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+			}
 		}
 		break;
 		
@@ -626,11 +637,11 @@ void affiche_quad_spim(struct Quad* quad)
 		{
 			int nb_dimensions = quad->res->info.tableau.nombre_dimension; //pour l'instant, dim = 1
 			
-			fprintf(output, "\tla $f0 _%s\n", quad->res->info.nom);
+			fprintf(output, "\tla $t0 _%s\n", quad->res->info.nom);
 			for(int i = 0; i < quad->res->info.tableau.taille_dimensions[0]; i++)
 			{
-				fprintf(output, "\tli.s $f1 %d\n", quad->res->info.tableau.valeurs_entieres_tableau[i]);
-				fprintf(output, "\ts.s $f1 %d($f0)\n", i*4);
+				fprintf(output, "\tli.s $f1 %f\n", quad->res->info.tableau.valeurs_flottantes_tableau[i]);
+				fprintf(output, "\ts.s $f1 %d($t0)\n", i*4);
 			}
 		}
 		break;

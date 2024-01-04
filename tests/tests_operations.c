@@ -1,6 +1,6 @@
 int main()
 {
-	float a = 2.5 + 3.2 + 1.4 + 11.6;
+	/*float a = 2.5 + 3.2 + 1.4 + 11.6;
 	float b, c, d;
 	float x = a;
 	float z = a + 2.6;
@@ -52,13 +52,13 @@ int main()
 	{
 		print(test);
 		test = test - 1;
-	}
+	}*/
 	
 	int abc = 44;
 	
-	int tab[4] = {1, 2, 3, 4};
+	float tab[4] = {1.1, 2.2, 3.3, 4.4};
 	
-	int bcd = tab[2];
+	float bcd = tab[2];
 	
 	print(bcd);
 	
