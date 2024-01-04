@@ -652,46 +652,46 @@ void affichage_symbole(struct noeud* noeud)
 	if(noeud->info.sorte == SORTE_CONSTANTE)
 	{
 		if(noeud->info.type == TYPE_INT)
-			fprintf(output, "%d", noeud->info.valeur_entiere);
+			printf("%d", noeud->info.valeur_entiere);
 		else if(noeud->info.type == TYPE_FLOAT)
-			fprintf(output, "%f", noeud->info.valeur_flottante);
+			printf("%f", noeud->info.valeur_flottante);
 		else if(noeud->info.type == TYPE_STR)
-			fprintf(output, "%s", noeud->info.valeur_str);
+			printf("%s", noeud->info.valeur_str);
 	}
 	else
 	{
-		fprintf(output, "$%s", noeud->info.nom);
+		printf("$%s", noeud->info.nom);
 	}
 }
 
 void affichage_tds(struct tds* tds)
 {
     struct noeud* temp;
-    fprintf(output, "\n");
-    fprintf(output, "\t\t\tTable des symboles\n");
-    fprintf(output, "/////////////////////////////////////////////////////////////////////////\n");
+    printf("\n");
+    printf("\t\t\tTable des symboles\n");
+    printf("/////////////////////////////////////////////////////////////////////////\n");
     for(int i = 0; i < tds->taille_max; i++) 
 	{
 	    temp = tds->listes[i];
 	    if(temp != NULL)
-	    	fprintf(output, "Entrée %d : ", i);
+	    	printf("Entrée %d : ", i);
 	    while(temp != NULL) 
 	    {
 	    	if(temp->info.sorte == SORTE_CONSTANTE)
 	    	{
 	    		if(temp->info.type == TYPE_INT)
-	    			fprintf(output, "|%s, %s, %s, %d|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type), temp->info.valeur_entiere);
+	    			printf("|%s, %s, %s, %d|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type), temp->info.valeur_entiere);
         		else if(temp->info.type == TYPE_FLOAT)
-				    fprintf(output, "|%s, %s, %s, %f|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type), temp->info.valeur_flottante);
+				    printf("|%s, %s, %s, %f|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type), temp->info.valeur_flottante);
 			else if(temp->info.type == TYPE_STR)
-					fprintf(output, "|%s, %s, %s, %s|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type), temp->info.valeur_str);
+					printf("|%s, %s, %s, %s|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type), temp->info.valeur_str);
 	    	}
 	    	else
-	        	fprintf(output, "|%s, %s, %s|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type));
+	        	printf("|%s, %s, %s|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type));
 	        temp = temp->suivant;
-	        fprintf(output, "\n");
+	        printf("\n");
 	    }
 	    
 	}
-	fprintf(output, "/////////////////////////////////////////////////////////////////////////\n\n");
+	printf("/////////////////////////////////////////////////////////////////////////\n\n");
 }
