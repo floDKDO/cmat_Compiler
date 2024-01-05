@@ -375,6 +375,110 @@ void affiche_quad_spim(struct Quad* quad)
 					fprintf(output, "\tli $v0, 2\n");
 				}
 			}
+			else if (quad->res->info.sorte == SORTE_TABLEAU)
+			{
+				if(quad->res->info.tableau.nombre_dimension == 1)
+				{
+					if(quad->arg1->info.sorte == SORTE_CONSTANTE)
+					{
+						if (quad->res->info.type == TYPE_INT) 
+						{
+							int offset = quad->arg1->info.valeur_entiere * 4; //4 = sizeof(int) en MIPS
+							
+							fprintf(output, "\tla $t0 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tlw $a0 %d($t0)\n", offset);
+							fprintf(output, "\tli $v0, 1\n");
+						}
+						else if (quad->res->info.type == TYPE_FLOAT) 
+						{
+							int offset = quad->arg1->info.valeur_entiere * 4; //4 = sizeof(float) en MIPS
+						
+							fprintf(output, "\tla $t0 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tl.s $f12 %d($t0)\n", offset);
+							fprintf(output, "\tli $v0, 2\n");
+						}
+					}
+					else if(quad->arg1->info.sorte == SORTE_VARIABLE)
+					{
+						fprintf(output, "\tla $t0 _%s\n", quad->res->info.nom);
+						fprintf(output, "\tlw $t1 _%s\n", quad->arg1->info.nom);
+						fprintf(output, "\tmul $t1, $t1, 4\n"); //*4 pour le type int/float
+						fprintf(output, "\tadd $a0, $t0, $t1\n"); //ajouter l'indice i * 4
+						
+						if (quad->res->info.type == TYPE_INT) 
+						{
+							fprintf(output, "\tlw $a0, 0($a0)\n"); //charger la case dans $a0
+							fprintf(output, "\tli $v0, 1\n");
+						}
+						else if (quad->res->info.type == TYPE_FLOAT) 
+						{
+							fprintf(output, "\tl.s $f12, 0($a0)\n"); //charger la case dans $f12
+							fprintf(output, "\tli $v0, 2\n");
+						}
+					}
+				}
+				else if(quad->res->info.tableau.nombre_dimension == 2)
+				{
+					if(quad->arg1->info.sorte == SORTE_CONSTANTE && quad->arg2->info.sorte == SORTE_CONSTANTE)
+					{
+						if (quad->res->info.type == TYPE_INT) 
+						{
+							int offset = (quad->arg1->info.valeur_entiere * quad->res->info.tableau.taille_dimensions[1] + quad->arg2->info.valeur_entiere) * 4;
+							
+							fprintf(output, "\tla $t0 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tlw $a0 %d($t0)\n", offset);
+							fprintf(output, "\tli $v0, 1\n");
+						}
+						else if (quad->res->info.type == TYPE_FLOAT) 
+						{
+							int offset = (quad->arg1->info.valeur_entiere * quad->res->info.tableau.taille_dimensions[1] + quad->arg2->info.valeur_entiere) * 4;
+						
+							fprintf(output, "\tla $t0 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tl.s $f12 %d($t0)\n", offset);
+							fprintf(output, "\tli $v0, 2\n");
+						}
+					}
+					else
+					{
+						fprintf(output, "\tla $t0 _%s\n", quad->res->info.nom); //adresse de base du tableau
+						if(quad->arg1->info.sorte == SORTE_VARIABLE)
+						{
+							fprintf(output, "\tlw $t1 _%s\n", quad->arg1->info.nom); //récupérer valeur indice 1 (variable)
+						}
+						else if(quad->arg1->info.sorte == SORTE_CONSTANTE)
+						{
+							fprintf(output, "\tli $t1 %d\n", quad->arg1->info.valeur_entiere); //récupérer valeur indice 1 (constante)
+						}
+						
+						if(quad->arg2->info.sorte == SORTE_VARIABLE)
+						{
+							fprintf(output, "\tlw $t2 _%s\n", quad->arg2->info.nom); //récupérer valeur indice 2 (variable)
+						}
+						else if(quad->arg2->info.sorte == SORTE_CONSTANTE)
+						{
+							fprintf(output, "\tli $t2 %d\n", quad->arg2->info.valeur_entiere); //récupérer valeur indice 2 (constante)
+						}
+						
+						//Bon indice (Row Order)
+						fprintf(output, "\tli $t3 %d\n", quad->res->info.tableau.taille_dimensions[1]);
+						fprintf(output, "\tmul $t1, $t1, $t3\n");
+						fprintf(output, "\tadd $t1, $t1, $t2\n"); 
+						fprintf(output, "\tmul $t1, $t1, 4\n"); //*4 pour le type int/float
+						fprintf(output, "\tadd $a0, $t0, $t1\n"); //ajouter l'indice i * 4
+						
+						if (quad->res->info.type == TYPE_INT) 
+						{
+							fprintf(output, "\tlw $a0, 0($a0)\n"); //charger la case dans $a0
+							fprintf(output, "\tli $v0, 1\n");
+						}
+						else if (quad->res->info.type == TYPE_FLOAT) 
+						{
+							fprintf(output, "\tl.s $f12, 0($a0)\n"); //charger la case dans $f12
+							fprintf(output, "\tli $v0, 2\n");
+						}
+					}
+				}
+			}
 			
 			fprintf(output, "\tsyscall\n");
 			
@@ -582,7 +686,6 @@ void affiche_quad_spim(struct Quad* quad)
 		}
 		break;
 	case QOP_ASSIGN:
-		//printf("Mon type : %d et %d\n", quad->arg1->info.type, quad->res->info.type);
 		if (quad->res->info.type == TYPE_INT) {
 			if (quad->arg1->info.sorte == SORTE_CONSTANTE) {
 				fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
@@ -593,13 +696,12 @@ void affiche_quad_spim(struct Quad* quad)
 			}
 			else if (quad->arg1->info.sorte == SORTE_TABLEAU) 
 			{
-				int offset = quad->arg2->info.valeur_entiere*4;
+				int offset = quad->arg2->info.valeur_entiere * 4; //4 = sizeof(int) en MIPS
 				
 				fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
 				fprintf(output, "\tlw $t1 %d($t0)\n", offset);
 				fprintf(output, "\tsw $t1 _%s\n", quad->res->info.nom);
 			}
-			
 		} 
 		else if (quad->res->info.type == TYPE_FLOAT) {
 			if (quad->arg1->info.sorte == SORTE_CONSTANTE) {
@@ -611,7 +713,7 @@ void affiche_quad_spim(struct Quad* quad)
 			}
 			else if (quad->arg1->info.sorte == SORTE_TABLEAU) 
 			{
-				int offset = quad->arg2->info.valeur_entiere*4;
+				int offset = quad->arg2->info.valeur_entiere * 4; //4 = sizeof(float) en MIPS
 				
 				fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
 				fprintf(output, "\tl.s $f1 %d($t0)\n", offset);
@@ -623,25 +725,54 @@ void affiche_quad_spim(struct Quad* quad)
 	case QOP_ASSIGN_TAB:
 		if (quad->res->info.type == TYPE_INT && quad->res->info.sorte == SORTE_TABLEAU) 
 		{				
-			int nb_dimensions = quad->res->info.tableau.nombre_dimension; //pour l'instant, dim = 1
-			
 			fprintf(output, "\tla $t0 _%s\n", quad->res->info.nom);
-			for(int i = 0; i < quad->res->info.tableau.taille_dimensions[0]; i++)
-			{
-				fprintf(output, "\tli $t1 %d\n", quad->res->info.tableau.valeurs_entieres_tableau[i]);
-				fprintf(output, "\tsw $t1 %d($t0)\n", i*4);
-			}
 			
+			if(quad->res->info.tableau.nombre_dimension == 1) //tableau 1D
+			{
+				for(int i = 0; i < quad->res->info.tableau.taille_dimensions[0]; i++)
+				{
+					fprintf(output, "\tli $t1 %d\n", quad->res->info.tableau.valeurs_entieres_tableau[i]);
+					fprintf(output, "\tsw $t1 %d($t0)\n", i*4); //4 = sizeof(int) en MIPS
+				}
+			}
+			else if(quad->res->info.tableau.nombre_dimension == 2) //tableau 2D
+			{
+				int next_index = 0;
+				for(int j = 0; j < quad->res->info.tableau.taille_dimensions[0]; j++) //Exemple : int tab[4][2] => j 0->3
+				{
+				    for(int i = 0; i < quad->res->info.tableau.taille_dimensions[1]; i++) //Exemple : int tab[4][2] => i 0->1,
+				    {
+				    	fprintf(output, "\tli $t1 %d\n", quad->res->info.tableau.valeurs_entieres_tableau[i+next_index]); //Exemple : int tab[4][2] => i+next_index 0->1, 2->3, 4->5, 6->7. Cela permet de récupérer les valeurs des 4 groupes de 2 valeurs et de les placer au bon endroit
+					fprintf(output, "\tsw $t1 %d($t0)\n", (i+next_index)*4); //4 = sizeof(int) en MIPS
+				    }
+				    next_index += quad->res->info.tableau.taille_dimensions[1];
+				}
+			}
 		} 
 		else if (quad->res->info.type == TYPE_FLOAT && quad->res->info.sorte == SORTE_TABLEAU) 
 		{
-			int nb_dimensions = quad->res->info.tableau.nombre_dimension; //pour l'instant, dim = 1
-			
 			fprintf(output, "\tla $t0 _%s\n", quad->res->info.nom);
-			for(int i = 0; i < quad->res->info.tableau.taille_dimensions[0]; i++)
+			
+			if(quad->res->info.tableau.nombre_dimension == 1)
 			{
-				fprintf(output, "\tli.s $f1 %f\n", quad->res->info.tableau.valeurs_flottantes_tableau[i]);
-				fprintf(output, "\ts.s $f1 %d($t0)\n", i*4);
+				for(int i = 0; i < quad->res->info.tableau.taille_dimensions[0]; i++)
+				{
+					fprintf(output, "\tli.s $f1 %f\n", quad->res->info.tableau.valeurs_flottantes_tableau[i]);
+					fprintf(output, "\ts.s $f1 %d($t0)\n", i*4); //4 = sizeof(float) en MIPS
+				}
+			}
+			else if(quad->res->info.tableau.nombre_dimension == 2)
+			{
+				int next_index = 0;
+				for(int j = 0; j < quad->res->info.tableau.taille_dimensions[0]; j++) //0->2 pour tab[2][2]
+				{
+				    for(int i = 0; i < quad->res->info.tableau.taille_dimensions[1]; i++) //0->2 et 2->4
+				    {
+				    	fprintf(output, "\tli.s $f1 %f\n", quad->res->info.tableau.valeurs_flottantes_tableau[i+next_index]);
+					fprintf(output, "\ts.s $f1 %d($t0)\n", (i+next_index)*4); //4 = sizeof(float) en MIPS
+				    }
+				    next_index += quad->res->info.tableau.taille_dimensions[1];
+				}
 			}
 		}
 		break;
@@ -928,6 +1059,7 @@ void affiche_data_spim()
 	    while(temp != NULL) 
 	    {
 	    	if(temp->info.sorte == SORTE_VARIABLE) {
+	    		fprintf(output, "\t.align 2\n");
 			if (temp->info.type == TYPE_INT) {
 				fprintf(output, "_%s:\t.word %d\n", temp->info.nom, temp->info.valeur_entiere);
 			} else if (temp->info.type == TYPE_FLOAT){
@@ -943,8 +1075,11 @@ void affiche_data_spim()
 	    	}
 	    	else if(temp->info.sorte == SORTE_TABLEAU)
 	    	{
-	    		//TODO : que tableau 1D pour l'instant
-	    		fprintf(output, "_%s:\t.space %d\n", temp->info.nom, temp->info.tableau.taille_dimensions[0] * 4); //* 4 car int et float font 4 octets en MIPS
+	    		fprintf(output, "\t.align 2\n");
+	    		if(temp->info.tableau.nombre_dimension == 1) //tableau 1D
+	    			fprintf(output, "_%s:\t.space %d\n", temp->info.nom, temp->info.tableau.taille_dimensions[0] * 4); //* 4 car int et float font 4 octets en MIPS
+	    		else if(temp->info.tableau.nombre_dimension == 2) //tableau 2D
+	    			fprintf(output, "_%s:\t.space %d\n", temp->info.nom, temp->info.tableau.taille_dimensions[0] * temp->info.tableau.taille_dimensions[1] * 4); //* 4 car int et float font 4 octets en MIPS
 	    	}
 		temp = temp->suivant;
 	    }

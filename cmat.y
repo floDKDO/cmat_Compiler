@@ -1,11 +1,19 @@
 %{
 
+#include <stdbool.h>
+
 extern int yylex();
 void yyerror(const char* msg);
 
 int syntax_error = 0;
 
+int indice = 0; //pour liste_entiers et liste_flottants
+int last_index = 0; //derniere valeur de indice
+
 int indice_tab_str = 0;
+
+bool execute_action_incr_et_decr = true; //empêcher que le incr et decr soit exécuté trop tôt dans la boucle for
+int action_incr_et_decr = 0; //0 ou 1 ou 2 ou 3 selon l'action de incr et decr pour la boucle for
 
 %}
 
@@ -23,8 +31,8 @@ int indice_tab_str = 0;
 		int nDim;
 		int tailleDim;
 		int taillesDim[MAX_DIMENSION_TABLEAU];
-		int listeValeursEntieres[64];
-		float listeValeursFlottantes[64];
+		int listeValeursEntieres[1024];
+		float listeValeursFlottantes[1024];
 	} tableau;
 	
 	enum QuadOp op;
@@ -38,7 +46,7 @@ int indice_tab_str = 0;
 	
 	
 	struct {
-		int indice_demande; //si tableau
+		int indice_demande[2]; //si tableau : [0] pour tab 1D et [0][1] pour tab 2d
 		struct noeud* ptr;
 	} exprval;
 	
@@ -141,8 +149,28 @@ boucle_for : FOR '(' type IDENT {struct noeud* entree = get_symbole(tds, $4);
                	 	exit(1);
                	}
 } 
-'=' expression {struct noeud* entree = get_symbole(tds, $7.ptr->info.nom); gencode(liste_quad, QOP_FOR, entree, NULL, $<exprval>5.ptr);}
-';' expression {gencode(liste_quad, QOP_HALF_FOR, NULL, NULL, $10.ptr);} ';' incr_et_decr ')' corps{gencode(liste_quad, QOP_END_FOR, NULL, NULL, NULL);}
+'=' expression {struct noeud* entree = get_symbole(tds, $7.ptr->info.nom); gencode(liste_quad, QOP_FOR, entree, NULL, $<exprval>5.ptr); /*$<exprval>$.ptr = entree;*/}
+';' expression {gencode(liste_quad, QOP_HALF_FOR, NULL, NULL, $10.ptr);} ';' {execute_action_incr_et_decr = false;} incr_et_decr {execute_action_incr_et_decr = true;} 
+')' corps{
+	//il faut effectuer l'incrémentation/décrémentation maintenant
+	if(action_incr_et_decr == 0) 
+	{
+		gencode(liste_quad, QOP_POST_INCR, $14.ptr, NULL, $14.ptr);
+	}
+	else if(action_incr_et_decr == 1) 
+	{
+		gencode(liste_quad, QOP_POST_DECR, $14.ptr, NULL, $14.ptr);
+	}
+	else if(action_incr_et_decr == 2) 
+	{
+		gencode(liste_quad, QOP_PRE_INCR, $14.ptr, NULL, $14.ptr);
+	}
+	else if(action_incr_et_decr == 3) 
+	{
+		gencode(liste_quad, QOP_PRE_DECR, $14.ptr, NULL, $14.ptr);
+	}
+	gencode(liste_quad, QOP_END_FOR, NULL, NULL, NULL);
+}
 ;
 
 boucle_while : WHILE '(' {gencode(liste_quad, QOP_WHILE, NULL, NULL, NULL);} expression {
@@ -167,48 +195,70 @@ declaration_variable : type liste_variable_declaree
 			if(noeud != NULL)
 				noeud->info.type = $1;
 		}
+		
+		/*indice = 0; //reset indice de liste_entiers et liste_flottants
+		last_index = indice; //reset*/
 	}
 ;
 
-liste_variable_declaree : liste_variable_declaree ',' variable_declaree {strcpy($$[indice_tab_str], $3); indice_tab_str += 1;}
-			| variable_declaree {strcpy($$[indice_tab_str], $1); indice_tab_str += 1;}
+liste_variable_declaree : liste_variable_declaree ',' variable_declaree {
+				strcpy($$[indice_tab_str], $3); 
+				indice_tab_str += 1; 
+				indice = 0; //reset indice de liste_entiers et liste_flottants
+				last_index = indice; //reset
+			}
+			| variable_declaree {
+			strcpy($$[indice_tab_str], $1); 
+			indice_tab_str += 1; 
+			indice = 0; //reset indice de liste_entiers et liste_flottants
+			last_index = indice; //reset
+			}
 ;
 
 variable_declaree : 
 	IDENT {struct noeud* entree = insertion(&tds, $1, SORTE_VARIABLE, TYPE_NONE); /*strcpy($$, $1);*/}
-    | IDENT '=' expression {
+	| IDENT '=' expression {
     
 		struct noeud* entree = insertion(&tds, $1, SORTE_VARIABLE, TYPE_NONE);
-            if(entree == NULL) {
-                fprintf(stderr,"Previous declaration of %s exists\n", $1); 
-                exit(1);
-            }
-        		
+		if(entree == NULL) 
+		{
+			fprintf(stderr,"Previous declaration of %s exists\n", $1); 
+			exit(1);
+		}
+        	
         	if($3.ptr->info.sorte == SORTE_TABLEAU)
         	{		
         		struct noeud* indice;
-        		//if($3.ptr->info.type == TYPE_INT)
-				indice = get_symbole_constante_int(tds, $3.indice_demande);
-			/*else if($3.ptr->info.type == TYPE_FLOAT)
-			{
-				indice = get_symbole_constante(tds, $3.indice_demande);
-			}*/
-				
-			gencode(liste_quad, QOP_ASSIGN, $3.ptr, indice, entree);
+        		if($3.ptr->info.tableau.nombre_dimension == 1)
+        		{
+				indice = get_symbole_constante_int(tds, $3.indice_demande[0]);
+			}
+			else if($3.ptr->info.tableau.nombre_dimension == 2)
+        		{
+        			//tableau 2D => récupérer la bonne case
+        			int indice_dim_un = $3.indice_demande[0];
+        			int indice_dim_deux = $3.indice_demande[1];
+        			
+        			//pour obtenir le bon indice (valeurs rangées en ROW ORDER)
+        			int vrai_indice = indice_dim_un * $3.ptr->info.tableau.taille_dimensions[1] + indice_dim_deux;
+        			indice = insertion_constante(&tds, TYPE_INT, vrai_indice); //on ajoute le vrai indice à la table des symboles
+        		}
+        		gencode(liste_quad, QOP_ASSIGN, $3.ptr, indice, entree); //la case de tableau demandée se trouve dans la valeur_entiere de indice
         	}
         	else
         	{
 			gencode(liste_quad, QOP_ASSIGN, $3.ptr, NULL, entree);
 		}
-			
-			//strcpy($$, $1);
-		}
-    | IDENT intervalle_dimension {struct noeud* entree = insertion_tableau(&tds, $1, TYPE_NONE, $2.nDim, $2.taillesDim); 
-    
-    		if(entree == NULL) {
-                fprintf(stderr,"Previous declaration of %s exists\n", $1); 
-                exit(1);
-            }}
+		//strcpy($$, $1);
+	}
+    | IDENT intervalle_dimension {
+    		struct noeud* entree = insertion_tableau(&tds, $1, TYPE_NONE, $2.nDim, $2.taillesDim); 
+    		if(entree == NULL) 
+    		{
+                	fprintf(stderr,"Previous declaration of %s exists\n", $1); 
+                	exit(1);
+            	}
+           }
     | IDENT intervalle_dimension '=' valeur_tableau {
     
     		struct noeud* entree = insertion_tableau(&tds, $1, $4.type_tab, $2.nDim, $2.taillesDim); 
@@ -221,22 +271,49 @@ variable_declaree :
 		
 		if(entree->info.type == TYPE_INT)
 		{
-			//taille dimension 1
-		    for(int i = 0; i < $2.taillesDim[0]; i++)
-		    {
-		    	entree->info.tableau.valeurs_entieres_tableau[i] = $4.listeValeursEntieres[i];
-		    }
+			if($2.nDim == 1)
+			{
+				for(int i = 0; i < $2.taillesDim[0]; i++)
+				{
+					entree->info.tableau.valeurs_entieres_tableau[i] = $4.listeValeursEntieres[i];
+				}
+			}
+			else if($2.nDim == 2)
+			{
+				int next_index = 0;
+				for(int j = 0; j < $2.taillesDim[0]; j++) //Exemple : int tab[4][2] => j 0->3
+				{
+				    for(int i = next_index; i < $2.taillesDim[1] + next_index; i++) //Exemple : int tab[4][2] => i 0->1, 2->3, 4->5, 6->7. Cela permet de récupérer les valeurs des 4 groupes de 2 valeurs et de les placer au bon endroit
+				    {
+				    	entree->info.tableau.valeurs_entieres_tableau[i] = $4.listeValeursEntieres[i];
+				    }
+				    next_index += $2.taillesDim[1]; //Valeurs du tableau 2D placées au bon indice dans le tableau 1D.
+				}
+			}
 		}
 		else if(entree->info.type == TYPE_FLOAT)
 		{
-			//taille dimension 1
-		    for(int i = 0; i < $2.taillesDim[0]; i++)
-		    {
-		    	entree->info.tableau.valeurs_flottantes_tableau[i] = $4.listeValeursFlottantes[i];
-		    }
+			if($2.nDim == 1)
+			{
+				for(int i = 0; i < $2.taillesDim[0]; i++)
+				{
+					entree->info.tableau.valeurs_flottantes_tableau[i] = $4.listeValeursFlottantes[i];
+				}
+			}
+			else if($2.nDim == 2)
+			{
+				int next_index = 0;
+				for(int j = 0; j < $2.taillesDim[0]; j++) //idem TYPE_INT
+				{
+				    for(int i = next_index; i < $2.taillesDim[1] + next_index; i++) //idem TYPE_INT
+				    {
+				    	entree->info.tableau.valeurs_flottantes_tableau[i] = $4.listeValeursFlottantes[i];
+				    }
+				    next_index += $2.taillesDim[1];
+				}
+			}
 		}
-            
-            gencode(liste_quad, QOP_ASSIGN_TAB, NULL, NULL, entree);
+            	gencode(liste_quad, QOP_ASSIGN_TAB, NULL, NULL, entree);
 }
 ;
 
@@ -252,7 +329,8 @@ operation : expression {$$.ptr = $1.ptr;}
 				  //TODO : switch case pour les différents types de QOP_ASSIGN
 	
 				  gencode(liste_quad, QOP_ASSIGN, $3.ptr, NULL, entree);
-				  $$.ptr = entree;}
+				  
+				  $$.ptr = entree;} 
 	| IDENT intervalle_dimension assign operation {}
 ;
 
@@ -281,6 +359,33 @@ appel_fonction :
 				gencode(liste_quad, QOP_PRINT, NULL, NULL, entree);
 				$$.ptr = entree;
 				}
+	| PRINT '(' IDENT '[' expression ']' ')' {
+		struct noeud* entree = get_symbole(tds, $3);
+		struct noeud* indice = $5.ptr;
+
+		if(entree->info.sorte == SORTE_TABLEAU)
+        	{		
+        		if(entree->info.tableau.nombre_dimension == 1)
+        		{
+				gencode(liste_quad, QOP_PRINT, indice, NULL, entree);
+        			$$.ptr = entree;
+			}
+        	}
+	}
+	| PRINT '(' IDENT '[' expression ']' '[' expression ']' ')' {
+		struct noeud* entree = get_symbole(tds, $3);
+		struct noeud* indice1 = $5.ptr;
+		struct noeud* indice2 = $8.ptr;
+
+		if(entree->info.sorte == SORTE_TABLEAU)
+        	{		
+        		if(entree->info.tableau.nombre_dimension == 2)
+        		{
+				gencode(liste_quad, QOP_PRINT, indice1, indice2, entree);
+        			$$.ptr = entree;
+			}
+        	}
+	}
 	| PRINTMAT '(' IDENT ')' {}
 ;
             
@@ -298,8 +403,7 @@ argument :  IDENT assign expression
 ; 
 
 expression : 
-	valeur {
-			struct noeud* entree;
+	valeur {	struct noeud* entree;
 			if($1.ptr->info.sorte == SORTE_CONSTANTE) {
 				if($1.ptr->info.type == TYPE_INT)
 					entree = get_symbole_constante_int(tds, $1.ptr->info.valeur_entiere);
@@ -733,8 +837,15 @@ expression :
 
        
 intervalle_dimension : 
-	intervalle_dimension '[' liste_rangee ']' {$$.nDim = $1.nDim + 1; $$.taillesDim[0] = $1.tailleDim; $$.taillesDim[1] = $3.tailleDim;} 
-    | '[' liste_rangee ']' {$$.type_tab = $2.type_tab; $$.nDim = 1; $$.tailleDim = $2.tailleDim; $$.taillesDim[0] = $2.tailleDim;} 
+	intervalle_dimension '[' liste_rangee ']' {$$.nDim = $1.nDim + 1; 
+							$$.taillesDim[0] = $1.tailleDim; 
+							$$.taillesDim[1] = $3.tailleDim;} 
+    | '[' liste_rangee ']' {
+			    $$.type_tab = $2.type_tab; 
+			    $$.nDim = 1; 
+			    $$.tailleDim = $2.tailleDim; 
+			    $$.taillesDim[0] = $2.tailleDim; 
+			    } 
 ;
 
 liste_rangee : 
@@ -742,17 +853,55 @@ liste_rangee :
     | rangee {$$ = $1; $$.nDim = 1;}
 ;
 
-rangee : '*' {$$.type_tab = TYPE_MATRIX; /*Matrix exclusivement*/} 
+rangee : '*' {$$.type_tab = TYPE_MATRIX; /*Avoir un '*' => Matrix exclusivement*/} 
         | expression INTERV_OP expression {$$.type_tab = TYPE_NONE;}
         | expression {$$.tailleDim = $1.ptr->info.valeur_entiere; $$.type_tab = TYPE_NONE;}
 ;
 
 valeur_tableau : '{' liste_nombre '}' {$$.type_tab = $2.type_tab; 
+
+					static int listeValeursEntieres_temp[1024]; //pour stocker les valeurs des éventuelles doubles accolades des tableaux 2D. 
+					static float listeValeursFlottantes_temp[1024];
 					
-					if($2.type_tab == TYPE_INT)
-						memcpy($$.listeValeursEntieres, $2.listeValeursEntieres, 64*sizeof(int));
+					/*
+					
+					Exemple : float tab1[2][2] = {{7.1, 8.1},{9.1, 1.1}};
+					
+					Premier parsage : {7.1, 8.1} => 7.1 et 8.1 dans listeValeursFlottantes_temp (le reste sont des 0.0)
+					Deuxième parsage : {9.1, 1.1} =>7.1, 8.1, 9.1 et 1.1 dans listeValeursFlottantes_temp (le reste sont des 0.0)
+					
+					On a voulu sauvegarder les valeurs du premier parsage : sans ce tableau, les valeurs du premier parsage sont perdues
+					
+					*/
+
+					if($2.type_tab == TYPE_INT)		
+					{
+						for(int i = last_index; i < 1024; i++)
+						{
+							listeValeursEntieres_temp[i] = $2.listeValeursEntieres[i];
+						}
+						memcpy($$.listeValeursEntieres, listeValeursEntieres_temp, 1024*sizeof(int));
+					}	
 					else if($2.type_tab == TYPE_FLOAT)
-						memcpy($$.listeValeursFlottantes, $2.listeValeursFlottantes, 64*sizeof(float));
+					{
+						for(int i = last_index; i < 1024; i++)
+						{
+							listeValeursFlottantes_temp[i] = $2.listeValeursFlottantes[i];
+						}
+						memcpy($$.listeValeursFlottantes, listeValeursFlottantes_temp, 1024*sizeof(float));
+						
+						/*
+					
+						Exemple : float tab1[2][2] = {{7.1, 8.1},{9.1, 1.1}};
+						
+						Premier parsage : {7.1, 8.1} => last_index vaut 2
+						Deuxième parsage : {9.1, 1.1} => pour insérer dans la 3ème case du tableau au deuxième parsage, on part à i = last_index = 2
+						
+						*/
+						
+					}
+					
+					last_index = indice;
 					
 					/*$$ = $2; $$.nDim = 1;*/
 					
@@ -760,20 +909,28 @@ valeur_tableau : '{' liste_nombre '}' {$$.type_tab = $2.type_tab;
 		| '{' liste_tableau '}' {$$ = $2; $$.nDim = $2.nDim + 1;}
 ;
 		
-liste_tableau : liste_tableau ',' valeur_tableau {$$.nDim = ($1.nDim >= $3.nDim ? $1.nDim : $3.nDim);
-}
+liste_tableau : liste_tableau ',' valeur_tableau {/*$$.nDim = ($1.nDim >= $3.nDim ? $1.nDim : $3.nDim);*/ 
+					if($3.type_tab == TYPE_INT)
+						memcpy($$.listeValeursEntieres, $3.listeValeursEntieres, 1024*sizeof(int)); //remonter les valeurs dans $$
+					else if($3.type_tab == TYPE_FLOAT)
+						memcpy($$.listeValeursFlottantes, $3.listeValeursFlottantes, 1024*sizeof(float));
+					}
 		| valeur_tableau {$$ = $1;}
 ;
 
 liste_nombre : liste_entiers {$$.type_tab = TYPE_INT;} | liste_flottants {$$.type_tab = TYPE_FLOAT;}
 ;
 
-liste_flottants : liste_flottants ',' constante_flottante {/*tab[1], ...*/ static int indice = 1; $$.listeValeursFlottantes[indice] = $3; indice += 1;}
-		 | constante_flottante {/*tab[0]*/ $$.listeValeursFlottantes[0] = $1;}
+liste_flottants : liste_flottants ',' constante_flottante {$$.listeValeursFlottantes[indice] = $3; 
+								indice += 1;}
+		 | constante_flottante {$$.listeValeursFlottantes[indice] = $1; 
+		 			indice+=1;}
 ;
 
-liste_entiers : liste_entiers ',' constante_entiere {/*tab[1], ...*/ static int indice = 1; $$.listeValeursEntieres[indice] = $3; indice += 1;}
-		| constante_entiere {/*tab[0]*/ $$.listeValeursEntieres[0] = $1;}
+liste_entiers : liste_entiers ',' constante_entiere {$$.listeValeursEntieres[indice] = $3; 
+							indice += 1;}
+		| constante_entiere {$$.listeValeursEntieres[indice] = $1; 
+					indice+=1;}
 ;
 
 type : INT {$$ = TYPE_INT;} | FLOAT {$$ = TYPE_FLOAT;} | MATRIX {$$ = TYPE_MATRIX;}
@@ -806,7 +963,18 @@ valeur :
 				yyerror(err_msg);
 				entree = insertion(&tds, $1, SORTE_NONE, TYPE_ERROR);
 			}
-			$$.indice_demande = $2.tailleDim; 
+			
+			
+			
+			if($2.nDim == 1) //tableau 1 dimension => uniquement $2.taillesDim[0] contient une valeur (Exemple : int tab[2]; => $2.taillesDim[0] = 2)
+			{
+				$$.indice_demande[0] = $2.taillesDim[0]; 
+			}
+			else if($2.nDim == 2) //tableau 2 dimensions => $2.taillesDim[0] (= taille dimension 1) et $2.taillesDim[1] (= taille dimension 2) contiennent une valeur (Exemple : int tab[2][3]; => $2.taillesDim[0] = 2 et $2.taillesDim[1] = 3)
+			{
+				$$.indice_demande[0] = $2.taillesDim[0]; 
+				$$.indice_demande[1] = $2.taillesDim[1]; 
+			}
 			$$.ptr = entree;}
     | incr_et_decr {
 			struct noeud* entree = get_symbole(tds, $1.ptr->info.nom); 
@@ -820,51 +988,71 @@ valeur :
 
 incr_et_decr : 
 	IDENT INCR {
-			$2 = QOP_POST_INCR; 
 			struct noeud* entree = get_symbole(tds, $1); 
-			if(entree == NULL) {
-				char err_msg[MAX_LENGTH_VAR_NAME + 20];
-				sprintf(err_msg, "Undeclared name : '%s'", $1);
-				yyerror(err_msg);
-				entree = insertion(&tds, $1, SORTE_NONE, TYPE_ERROR);
+			if(execute_action_incr_et_decr == true)
+			{
+				$2 = QOP_POST_INCR; 
+				if(entree == NULL) {
+					char err_msg[MAX_LENGTH_VAR_NAME + 20];
+					sprintf(err_msg, "Undeclared name : '%s'", $1);
+					yyerror(err_msg);
+					entree = insertion(&tds, $1, SORTE_NONE, TYPE_ERROR);
+				}
+				gencode(liste_quad, $2, entree, NULL, entree);
 			}
-			gencode(liste_quad, $2, entree, NULL, entree);
+			else action_incr_et_decr = 0; //pour boucle for => action 0 (i++)
+			
 			$$.ptr = entree;
 		}
 	| IDENT DECR {
-			$2 = QOP_POST_DECR;
-	     	struct noeud* entree = get_symbole(tds, $1); 
-			if(entree == NULL) {
-				char err_msg[MAX_LENGTH_VAR_NAME + 20];
-				sprintf(err_msg, "Undeclared name : '%s'", $1);
-				yyerror(err_msg);
-				entree = insertion(&tds, $1, SORTE_NONE, TYPE_ERROR);
+			struct noeud* entree = get_symbole(tds, $1); 
+			if(execute_action_incr_et_decr == true)
+			{
+				$2 = QOP_POST_DECR;
+				if(entree == NULL) {
+					char err_msg[MAX_LENGTH_VAR_NAME + 20];
+					sprintf(err_msg, "Undeclared name : '%s'", $1);
+					yyerror(err_msg);
+					entree = insertion(&tds, $1, SORTE_NONE, TYPE_ERROR);
+				}
+				gencode(liste_quad, $2, entree, NULL, entree);
 			}
-			gencode(liste_quad, $2, entree, NULL, entree);
+			else action_incr_et_decr = 1; //pour boucle for => action 1 (i--)
+			
 			$$.ptr = entree; 
 		}
 	| INCR IDENT {
-			$1 = QOP_PRE_INCR;
-	     	struct noeud* entree = get_symbole(tds, $2); 
-			if(entree == NULL) {
-				char err_msg[MAX_LENGTH_VAR_NAME + 20];
-				sprintf(err_msg, "Undeclared name : '%s'", $2);
-				yyerror(err_msg);
-				entree = insertion(&tds, $2, SORTE_NONE, TYPE_ERROR);
+			struct noeud* entree = get_symbole(tds, $2);
+			if(execute_action_incr_et_decr == true)
+			{
+				$1 = QOP_PRE_INCR; 
+				if(entree == NULL) {
+					char err_msg[MAX_LENGTH_VAR_NAME + 20];
+					sprintf(err_msg, "Undeclared name : '%s'", $2);
+					yyerror(err_msg);
+					entree = insertion(&tds, $2, SORTE_NONE, TYPE_ERROR);
+				}
+				gencode(liste_quad, $1, entree, NULL, entree);
 			}
-			gencode(liste_quad, $1, entree, NULL, entree);
+			else action_incr_et_decr = 2; //pour boucle for => action 2 (++i)
+			
 			$$.ptr = entree;
 		}
 	| DECR IDENT {
-			$1 = QOP_PRE_DECR;
-	     	struct noeud* entree = get_symbole(tds, $2); 
-			if(entree == NULL) {
-				char err_msg[MAX_LENGTH_VAR_NAME + 20];
-				sprintf(err_msg, "Undeclared name : '%s'", $2);
-				yyerror(err_msg);
-				entree = insertion(&tds, $2, SORTE_NONE, TYPE_ERROR);
+			struct noeud* entree = get_symbole(tds, $2); 
+			if(execute_action_incr_et_decr == true)
+			{
+				$1 = QOP_PRE_DECR;
+				if(entree == NULL) {
+					char err_msg[MAX_LENGTH_VAR_NAME + 20];
+					sprintf(err_msg, "Undeclared name : '%s'", $2);
+					yyerror(err_msg);
+					entree = insertion(&tds, $2, SORTE_NONE, TYPE_ERROR);
+				}
+				gencode(liste_quad, $1, entree, NULL, entree);
 			}
-			gencode(liste_quad, $1, entree, NULL, entree);
+			else action_incr_et_decr = 3; //pour boucle for => action 3 (--i)
+			
 			$$.ptr = entree;
 		}
 ;

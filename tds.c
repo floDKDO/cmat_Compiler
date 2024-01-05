@@ -238,8 +238,18 @@ struct noeud* insertion_tableau(struct tds** tds, char* nom, enum type type, int
         noeud->info.valeur_entiere = 0;
         noeud->info.valeur_flottante = 0.0;
         noeud->info.tableau.nombre_dimension = nombre_dimension;
-        noeud->info.tableau.valeurs_entieres_tableau = calloc(taille_dimensions[0], sizeof(int));
-        noeud->info.tableau.valeurs_flottantes_tableau = calloc(taille_dimensions[0], sizeof(float));
+        
+        if(nombre_dimension == 1)
+        {
+        	noeud->info.tableau.valeurs_entieres_tableau = calloc(taille_dimensions[0], sizeof(int)); 
+       	noeud->info.tableau.valeurs_flottantes_tableau = calloc(taille_dimensions[0], sizeof(float)); 
+        }
+        else if(nombre_dimension == 2)
+        {
+        	noeud->info.tableau.valeurs_entieres_tableau = calloc(taille_dimensions[0] * taille_dimensions[1], sizeof(int)); //row major
+        	noeud->info.tableau.valeurs_flottantes_tableau = calloc(taille_dimensions[0] * taille_dimensions[1], sizeof(float)); //row major
+        }
+        
         
         for(int i = 0; i < nombre_dimension; i++)
         {
@@ -272,11 +282,19 @@ struct noeud* insertion_tableau(struct tds** tds, char* nom, enum type type, int
             snprintf(noeud->info.nom, MAX_LONGUEUR_VARIABLE, "%s", nom);
             noeud->info.sorte = SORTE_TABLEAU;
             noeud->info.type = type;
-	     noeud->info.valeur_entiere = 0;
-	     noeud->info.valeur_flottante = 0.0;
-	     noeud->info.tableau.nombre_dimension = nombre_dimension;
-	     noeud->info.tableau.valeurs_entieres_tableau = calloc(taille_dimensions[0], sizeof(int));
-	     noeud->info.tableau.valeurs_flottantes_tableau = calloc(taille_dimensions[0], sizeof(float));
+		noeud->info.valeur_entiere = 0;
+		noeud->info.valeur_flottante = 0.0;
+		noeud->info.tableau.nombre_dimension = nombre_dimension;
+		if(nombre_dimension == 1)
+		{
+			noeud->info.tableau.valeurs_entieres_tableau = calloc(taille_dimensions[0], sizeof(int)); 
+			noeud->info.tableau.valeurs_flottantes_tableau = calloc(taille_dimensions[0], sizeof(float)); 
+		}
+		else if(nombre_dimension == 2)
+		{
+			noeud->info.tableau.valeurs_entieres_tableau = calloc(taille_dimensions[0] * taille_dimensions[1], sizeof(int)); //row major
+			noeud->info.tableau.valeurs_flottantes_tableau = calloc(taille_dimensions[0] * taille_dimensions[1], sizeof(float)); //row major
+		}
         
 		for(int i = 0; i < nombre_dimension; i++)
 		{
