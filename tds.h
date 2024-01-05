@@ -20,7 +20,7 @@ enum type //type de l'identificateur
 	TYPE_INT,
 	TYPE_FLOAT,
 	TYPE_STR,
-	TYPE_MATRIX,
+	TYPE_MATRIX, //utilisé que lors du parsage du type, ensuite regarder champ is_matrix
 	TYPE_ERROR
 };
 
@@ -43,7 +43,7 @@ struct info //infos sur un identificateur
 	
 	//on peut avoir dans le langage soit des variables, des constantes ou des tableaux
 	//utilisation d'une union car un identificateur peut être une seule des trois sortes à la fois
-	//VARIABLE (rien de spécial), CONSTANTE (valeur de la constante), TABLEAU (NOMBRE DIM + TAILLES DIM), MATRIX (NOMBRE DIM + TAILLES DIM)
+	//VARIABLE (rien de spécial), CONSTANTE (valeur de la constante), TABLEAU et MATRIX (NOMBRE DIM + TAILLES DIM)
 	union
 	{
 	    float valeur_flottante;
@@ -56,13 +56,18 @@ struct info //infos sur un identificateur
 	        int taille_dimensions[MAX_DIMENSION_TABLEAU]; //taille de chaque dimension : ex -> int tab[2][3]; => nombre_dimension = 2, et taille_dimensions[0] = 2 et taille_dimensions[1] = 3
 	        int* valeurs_entieres_tableau; //stockés en row major
 	        float* valeurs_flottantes_tableau; //stockés en row major
-	    } tableau; //tableau (hors matrix)
+	        
+	        ///////////////
+		bool is_matrix; //est vrai si le tableau est une matrix
+		///////////////
+	        
+	    } tableau; //tableau et matrix
 	    
-	    struct matrix
+	    /*struct matrix
 	    {
 	        int nombre_dimension;
 	        int taille_dimensions[2]; //une matrix peut posséder au max deux dimensions
-	    } matrix; 
+	    } matrix; */
 	};
 };
 

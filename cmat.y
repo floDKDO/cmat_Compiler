@@ -193,7 +193,36 @@ declaration_variable : type liste_variable_declaree
 		{ //mettre le type dans la tds
 			struct noeud* noeud = get_symbole(tds, $2[i]);
 			if(noeud != NULL)
-				noeud->info.type = $1;
+			{
+				if($1 == TYPE_MATRIX)
+				{
+					noeud->info.tableau.is_matrix = true;
+					if(noeud->info.type == TYPE_INT) //éléments de types int dans la matrice => on doit cast en float
+					{	
+						if(noeud->info.tableau.nombre_dimension == 1)
+						{
+							for(int i = 0; i < noeud->info.tableau.taille_dimensions[0]; ++i) 
+							{
+							    noeud->info.tableau.valeurs_flottantes_tableau[i] = (float)noeud->info.tableau.valeurs_entieres_tableau[i];
+							    noeud->info.tableau.valeurs_entieres_tableau[i] = 0;
+							}
+						}
+						else if(noeud->info.tableau.nombre_dimension == 2)
+						{
+							for(int i = 0; i < noeud->info.tableau.taille_dimensions[0]*noeud->info.tableau.taille_dimensions[1]; ++i) 
+							{
+							    noeud->info.tableau.valeurs_flottantes_tableau[i] = (float)noeud->info.tableau.valeurs_entieres_tableau[i];
+							    noeud->info.tableau.valeurs_entieres_tableau[i] = 0;
+							}
+						}
+						noeud->info.type = TYPE_FLOAT;
+					}
+				}
+				else if(noeud->info.tableau.is_matrix == false)
+				{
+					noeud->info.type = $1;
+				}
+			}
 		}
 		
 		/*indice = 0; //reset indice de liste_entiers et liste_flottants
@@ -262,6 +291,8 @@ variable_declaree :
     | IDENT intervalle_dimension '=' valeur_tableau {
     
     		struct noeud* entree = insertion_tableau(&tds, $1, $4.type_tab, $2.nDim, $2.taillesDim); 
+    		
+    		entree->info.tableau.is_matrix = false; //si c'est vraiment une matrix, cela renseigné au moment du parsage du type
     
     		if(entree == NULL) 
     		{
@@ -388,7 +419,8 @@ appel_fonction :
 	}
 	| PRINTMAT '(' IDENT ')' {
 	struct noeud* entree = get_symbole(tds, $3);
-	if(entree->info.type == TYPE_MATRIX)
+	
+	if(entree->info.tableau.is_matrix == true)
         {
 		gencode(liste_quad, QOP_PRINTMAT, NULL, NULL, entree);
 	}
@@ -423,12 +455,12 @@ expression :
 	| expression '+' expression {
 			if($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR) {
 				$$.ptr = newtemp(&tds, TYPE_ERROR);
-			} else if(($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.type != TYPE_MATRIX) || ($3.ptr->info.sorte == SORTE_TABLEAU && $3.ptr->info.type != TYPE_MATRIX)) {
+			} else if(($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.tableau.is_matrix == false) || ($3.ptr->info.sorte == SORTE_TABLEAU && $3.ptr->info.tableau.is_matrix == false)) {
 				yyerror("+ avec des tableaux");
 				$$.ptr = newtemp(&tds, TYPE_ERROR);
-			} else if($1.ptr->info.type == TYPE_MATRIX) {
+			} else if($1.ptr->info.tableau.is_matrix == true) {
 				//$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
-			} else if($3.ptr->info.type == TYPE_MATRIX) {
+			} else if($3.ptr->info.tableau.is_matrix == true) {
 				//$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
 			} else if($1.ptr->info.type == TYPE_FLOAT) {
 				$$.ptr = newtemp(&tds, TYPE_FLOAT);
@@ -454,12 +486,12 @@ expression :
 	| expression '-' expression {          
 			if($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR) {
 				$$.ptr = newtemp(&tds, TYPE_ERROR);
-			} else if(($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.type != TYPE_MATRIX) || ($3.ptr->info.sorte == SORTE_TABLEAU && $3.ptr->info.type != TYPE_MATRIX)) {
+			} else if(($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.tableau.is_matrix == false) || ($3.ptr->info.sorte == SORTE_TABLEAU && $3.ptr->info.tableau.is_matrix == false)) {
 				yyerror("- avec des tableaux");
 				$$.ptr = newtemp(&tds, TYPE_ERROR);
-			} else if($1.ptr->info.type == TYPE_MATRIX) {
+			} else if($1.ptr->info.tableau.is_matrix == true) {
 				//$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
-			} else if($3.ptr->info.type == TYPE_MATRIX) {
+			} else if($3.ptr->info.tableau.is_matrix == true) {
 				//$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
 			} else if($1.ptr->info.type == TYPE_FLOAT) {
 				$$.ptr = newtemp(&tds, TYPE_FLOAT);
@@ -485,12 +517,12 @@ expression :
     | expression '*' expression {
 			if($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR) {
 				$$.ptr = newtemp(&tds, TYPE_ERROR);
-			} else if(($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.type != TYPE_MATRIX) || ($3.ptr->info.sorte == SORTE_TABLEAU && $3.ptr->info.type != TYPE_MATRIX)) {
+			} else if(($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.tableau.is_matrix == false) || ($3.ptr->info.sorte == SORTE_TABLEAU && $3.ptr->info.tableau.is_matrix == false)) {
 				yyerror("* avec des tableaux");
 				$$.ptr = newtemp(&tds, TYPE_ERROR);
-			} else if($1.ptr->info.type == TYPE_MATRIX) {
+			} else if($1.ptr->info.tableau.is_matrix == true) {
 				//$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
-			} else if($3.ptr->info.type == TYPE_MATRIX) {
+			} else if($3.ptr->info.tableau.is_matrix == true) {
 				//$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
 			} else if($1.ptr->info.type == TYPE_FLOAT) {
 				$$.ptr = newtemp(&tds, TYPE_FLOAT);
@@ -516,12 +548,12 @@ expression :
     | expression '/' expression {
 			if($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR) {
 				$$.ptr = newtemp(&tds, TYPE_ERROR);
-			} else if(($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.type != TYPE_MATRIX) || ($3.ptr->info.sorte == SORTE_TABLEAU && $3.ptr->info.type != TYPE_MATRIX)) {
+			} else if(($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.tableau.is_matrix == false) || ($3.ptr->info.sorte == SORTE_TABLEAU && $3.ptr->info.tableau.is_matrix == false)) {
 				yyerror("/ avec des tableaux");
 				$$.ptr = newtemp(&tds, TYPE_ERROR);
-			} else if($1.ptr->info.type == TYPE_MATRIX) {
+			} else if($1.ptr->info.tableau.is_matrix == true) {
 				//$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
-			} else if($3.ptr->info.type == TYPE_MATRIX) {
+			} else if($3.ptr->info.tableau.is_matrix == true) {
 				//$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
 			} else if($1.ptr->info.type == TYPE_FLOAT) {
 				$$.ptr = newtemp(&tds, TYPE_FLOAT);
@@ -789,10 +821,10 @@ expression :
     | '-' expression %prec UNARY {
 			if($2.ptr->info.type == TYPE_ERROR) {
 				$$.ptr = newtemp(&tds, TYPE_ERROR);
-			} else if($2.ptr->info.sorte == SORTE_TABLEAU && $2.ptr->info.type != TYPE_MATRIX) {
+			} else if($2.ptr->info.sorte == SORTE_TABLEAU && $2.ptr->info.tableau.is_matrix == false) {
 				yyerror("- avec un tableau");
 				$$.ptr = newtemp(&tds, TYPE_ERROR);
-			} else if($2.ptr->info.type == TYPE_MATRIX) {
+			} else if($2.ptr->info.tableau.is_matrix == true) {
 				//$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
 			} else if($2.ptr->info.type == TYPE_FLOAT) {
 				$$.ptr = newtemp(&tds, TYPE_FLOAT);
@@ -823,12 +855,12 @@ expression :
     | '~' expression %prec UNARY {
 			if($2.ptr->info.type == TYPE_ERROR) {
 				$$.ptr = newtemp(&tds, TYPE_ERROR);
-			} else if($2.ptr->info.sorte == SORTE_TABLEAU && $2.ptr->info.type != TYPE_MATRIX) {
+			} else if($2.ptr->info.sorte == SORTE_TABLEAU && $2.ptr->info.tableau.is_matrix == false) {
 				yyerror("~ avec un tableau");
 				$$.ptr = newtemp(&tds, TYPE_ERROR);
 			} else if($2.ptr->info.type == TYPE_FLOAT) {
 				yyerror("~ avec un flottant");
-			} else if($2.ptr->info.type == TYPE_MATRIX) {
+			} else if($2.ptr->info.tableau.is_matrix == true) {
 				//$$.ptr = newtemp(&tds, TYPE_ERROR); => pas encore géré
 			} else if($2.ptr->info.type == TYPE_INT) {
 				$$.ptr = newtemp(&tds, TYPE_INT);
@@ -970,8 +1002,6 @@ valeur :
 				yyerror(err_msg);
 				entree = insertion(&tds, $1, SORTE_NONE, TYPE_ERROR);
 			}
-			
-			
 			
 			if($2.nDim == 1) //tableau 1 dimension => uniquement $2.taillesDim[0] contient une valeur (Exemple : int tab[2]; => $2.taillesDim[0] = 2)
 			{

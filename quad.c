@@ -417,7 +417,7 @@ void affiche_quad_spim(struct Quad* quad)
 							fprintf(output, "\tlw $a0, 0($a0)\n"); //charger la case dans $a0
 							fprintf(output, "\tli $v0, 1\n");
 						}
-						else if (quad->res->info.type == TYPE_FLOAT) 
+						else if (quad->res->info.type == TYPE_FLOAT)
 						{
 							fprintf(output, "\tl.s $f12, 0($a0)\n"); //charger la case dans $f12
 							fprintf(output, "\tli $v0, 2\n");
@@ -492,6 +492,99 @@ void affiche_quad_spim(struct Quad* quad)
 			//on ajoute un \n après un print
 			fprintf(output, "\n\tli $v0 4\n\tla $a0 newline\n\tsyscall\n");
 			break;
+			
+		case QOP_PRINTMAT:
+			if(quad->res->info.tableau.nombre_dimension == 1)
+			{
+				fprintf(output, "\tli $t1, %d\n", quad->res->info.tableau.taille_dimensions[0]); //borne sup boucle = nombre d'éléments dans le tableau 1D
+				fprintf(output, "\tli $t2, 0\n"); //i = 0
+
+				//boucle for int i = 0; i < quad->res->info.tableau.taille_dimensions[0]; i++ ////
+
+				fprintf(output, "Loop%d:\n", liste_quad->compteur_label_loop);
+				fprintf(output, "\tbeq $t2, $t1, End_Loop%d\n", liste_quad->compteur_label_endloop); //si i = quad->res->info.tableau.taille_dimensions[0], quitter la boucle
+
+				fprintf(output, "\tla $t0 _%s\n", quad->res->info.nom);
+				
+				fprintf(output, "\tmove $t3 $t2\n"); //$t3 = i
+				fprintf(output, "\tmul $t3, $t3, 4\n"); //*4 pour le type int/float
+				fprintf(output, "\tadd $a0, $t0, $t3\n"); //ajouter l'indice i * 4
+				
+				fprintf(output, "\tl.s $f12 0($a0)\n");
+				fprintf(output, "\tli $v0, 2\n");
+				fprintf(output, "\tsyscall\n");
+
+				//on ajoute un \t après un élément
+				fprintf(output, "\n\tli $v0 4\n\tla $a0 tabulation\n\tsyscall\n");
+
+				//i++
+				fprintf(output, "\taddi $t2, $t2, 1\n");
+
+				fprintf(output, "\tj Loop%d\n", liste_quad->compteur_label_loop);
+				fprintf(output, "End_Loop%d:\n", liste_quad->compteur_label_endloop);
+				liste_quad->compteur_label_loop += 1;
+		    		liste_quad->compteur_label_endloop += 1;
+		    		
+		    		//fin boucle for ////
+		    			
+				//on ajoute un \n après un print
+				fprintf(output, "\n\tli $v0 4\n\tla $a0 newline\n\tsyscall\n");   
+			}
+			else if(quad->res->info.tableau.nombre_dimension == 2)
+			{
+				fprintf(output, "\tli $t1, %d\n", quad->res->info.tableau.taille_dimensions[0]); 
+				fprintf(output, "\tli $t5, %d\n", quad->res->info.tableau.taille_dimensions[1]); 
+				fprintf(output, "\tmul $t1 $t1 $t5\n"); //borne sup boucle = nombre d'éléments dans le tableau 2D
+				fprintf(output, "\tli $t2, 0\n"); //i = 0
+
+				//boucle for int i = 0; i < quad->res->info.tableau.taille_dimensions[0] * quad->res->info.tableau.taille_dimensions[1]; i++ ////
+
+				fprintf(output, "Loop%d:\n", liste_quad->compteur_label_loop);
+				fprintf(output, "\tbeq $t2, $t1, End_Loop%d\n", liste_quad->compteur_label_endloop); //si i = quad->res->info.tableau.taille_dimensions[0], quitter la boucle
+
+				fprintf(output, "\tla $t0 _%s\n", quad->res->info.nom);
+				
+				fprintf(output, "\tmove $t3 $t2\n"); //$t3 = i
+				fprintf(output, "\tmul $t3, $t3, 4\n"); //*4 pour le type int/float
+				fprintf(output, "\tadd $a0, $t0, $t3\n"); //ajouter l'indice i * 4
+				
+				fprintf(output, "\tl.s $f12 0($a0)\n");
+				fprintf(output, "\tli $v0, 2\n");
+				fprintf(output, "\tsyscall\n");
+				
+				fprintf(output, "\trem $t4 $t2 $t5\n"); //$t4 = i % quad->res->info.tableau.taille_dimensions[1]
+				fprintf(output, "\tmove $t6 $t5\n"); //$t6 = quad->res->info.tableau.taille_dimensions[1]
+				fprintf(output, "\taddi $t6 $t6 -1\n"); //$t6 = quad->res->info.tableau.taille_dimensions[1] - 1
+				
+				//if(i % quad->res->info.tableau.taille_dimensions[1] == quad->res->info.tableau.taille_dimensions[1] - 1)
+				//=> \n
+				//else => \t
+				fprintf(output, "\tbeq $t4 $t6 Else%d\n", liste_quad->compteur_label_else);
+				fprintf(output, "\n\tli $v0 4\n\tla $a0 tabulation\n\tsyscall\n"); //on ajoute un \t après un élément
+				fprintf(output, "\tj Endif%d\n", liste_quad->compteur_label_endif);
+				fprintf(output, "Else%d:\n", liste_quad->compteur_label_else); //else
+				liste_quad->compteur_label_else += 1;
+				fprintf(output, "\n\tli $v0 4\n\tla $a0 newline\n\tsyscall\n"); //on ajoute un \n après une ligne
+				fprintf(output, "Endif%d:\n", liste_quad->compteur_label_endif);
+				liste_quad->compteur_label_endif += 1;
+				//fin if
+				
+
+				//i++
+				fprintf(output, "\taddi $t2, $t2, 1\n");
+
+				fprintf(output, "\tj Loop%d\n", liste_quad->compteur_label_loop);
+				fprintf(output, "End_Loop%d:\n", liste_quad->compteur_label_endloop);
+				
+				//fin boucle for ////
+				
+				liste_quad->compteur_label_loop += 1;
+		    		liste_quad->compteur_label_endloop += 1;
+				//on ajoute un \n après un print
+				fprintf(output, "\n\tli $v0 4\n\tla $a0 newline\n\tsyscall\n"); 
+			}
+			break;
+		
 	
 		case QOP_PRE_INCR:
 			if (quad->res->info.type == TYPE_INT) 
@@ -693,7 +786,9 @@ void affiche_quad_spim(struct Quad* quad)
 		}
 		break;
 	case QOP_ASSIGN:
-		if (quad->res->info.type == TYPE_INT) {
+	
+		if (quad->res->info.type == TYPE_INT) 
+		{
 			if (quad->arg1->info.sorte == SORTE_CONSTANTE) {
 				fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
 				fprintf(output, "\tsw $t0 _%s\n", quad->res->info.nom);
@@ -710,7 +805,8 @@ void affiche_quad_spim(struct Quad* quad)
 				fprintf(output, "\tsw $t1 _%s\n", quad->res->info.nom);
 			}
 		} 
-		else if (quad->res->info.type == TYPE_FLOAT) {
+		else if (quad->res->info.type == TYPE_FLOAT) 
+		{
 			if (quad->arg1->info.sorte == SORTE_CONSTANTE) {
 				fprintf(output, "\tli.s $f0 %f\n", quad->arg1->info.valeur_flottante);
 				fprintf(output, "\ts.s $f0 _%s\n", quad->res->info.nom);
@@ -1045,6 +1141,7 @@ void affiche_quad_spim(struct Quad* quad)
 		fprintf(output, "\tmtc1 $t0 $f0\n");
 		fprintf(output, "\tcvt.s.w $f0 $f0\n");
 		fprintf(output, "\ts.s $f0 _%s\n", quad->res->info.nom);
+		
 	default:
 		break;
 	}
@@ -1053,6 +1150,7 @@ void affiche_quad_spim(struct Quad* quad)
 void affiche_data_spim()
 {	
 	fprintf(output, "newline: .asciiz \"\\n\"\n");
+	fprintf(output, "tabulation: .asciiz \"\\t\"\n");
 	
 	//il faut écrire la constante flottante 1.0 pour permettre l'incrémentation
 	fprintf(output, "_%s:\t.float %f\n", "constante_float_incr", 1.0);

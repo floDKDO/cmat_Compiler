@@ -706,8 +706,14 @@ void affichage_tds(struct tds* tds)
 			else if(temp->info.type == TYPE_STR)
 					printf("|%s, %s, %s, %s|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type), temp->info.valeur_str);
 	    	}
-	    	else
+	    	else if(temp->info.sorte == SORTE_CONSTANTE)
 	        	printf("|%s, %s, %s|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type));
+	        else
+	        {
+	        	if(temp->info.tableau.is_matrix == true)
+	        		printf("|%s, %s, %s, MATRIX|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type));
+	        	else printf("|%s, %s, %s, TABLEAU CLASSIQUE|->", temp->info.nom, parser_enum_sorte(temp->info.sorte), parser_enum_type(temp->info.type));
+	        }
 	        temp = temp->suivant;
 	        printf("\n");
 	    }
