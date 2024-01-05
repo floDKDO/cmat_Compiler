@@ -386,7 +386,14 @@ appel_fonction :
 			}
         	}
 	}
-	| PRINTMAT '(' IDENT ')' {}
+	| PRINTMAT '(' IDENT ')' {
+	struct noeud* entree = get_symbole(tds, $3);
+	if(entree->info.type == TYPE_MATRIX)
+        {
+		gencode(liste_quad, QOP_PRINTMAT, NULL, NULL, entree);
+	}
+	$$.ptr = entree;
+}
 ;
             
 liste_parametre : liste_parametre ',' parametre | parametre

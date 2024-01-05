@@ -1,6 +1,6 @@
 int main()
 {
-	float a = 2.5 + 3.2 + 1.4 + 11.6;
+	/*float a = 2.5 + 3.2 + 1.4 + 11.6;
 	float b, c, d;
 	float x = a;
 	float z = a + 2.6;
@@ -52,16 +52,27 @@ int main()
 	{
 		print(test);
 		test = test - 1;
+	}*/
+	
+	if(2 + 1 == 4)
+	{
+		printf("toto\n");
 	}
 	
 	
-	float tab[4][3] = {{1.1, 2.1, 3.1},{5.1, 6.1, 7.1},{8.1, 9.1, 0.1},{8.2, 9.2, 0.2}};
+	/*matrix tab[4][3] = {{1.1, 2.1, 3.1},{5.1, 6.1, 7.1},{8.1, 9.1, 0.1},{8.2, 9.2, 0.2}};
+	
+	printmat(tab);
+	
+	tab = tab*2;
+	
+	print(tab[1+1][1+1]);
 	
 	//int tab[2] = {1, 2};
 	
 	for(int k = 0; k < 4; k++)
 	{
-		print(tab[k][0]);
+		print(k);
 	}
 	
 	printf("NEW2\n");
@@ -71,7 +82,7 @@ int main()
 		print(tab[l][l]);
 	}
 	
-	printf("NEW3\n");
+	printf("NEW3\n");*/
 	
 	
 	/*int abc = 44;

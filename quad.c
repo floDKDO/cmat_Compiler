@@ -318,7 +318,14 @@ void affiche_quad_spim(struct Quad* quad)
 		case QOP_IF:
 			if(quad->res->info.type == TYPE_INT)
 			{
-				fprintf(output, "\tlw $t0, _%s\n", quad->res->info.nom);
+				if(quad->res->info.sorte == SORTE_VARIABLE)
+				{
+					fprintf(output, "\tlw $t0, _%s\n", quad->res->info.nom);
+				}
+				else if(quad->res->info.sorte == SORTE_CONSTANTE)
+				{
+					fprintf(output, "\tli $t0, %d\n", quad->res->info.valeur_entiere);
+				}
 				fprintf(output, "\tbeq $t0 0 Else%u\n", liste_quad->compteur_label_else); //si la condition est fausse, ne pas exécuter le code du if
 			}
 			else if(quad->res->info.type == TYPE_FLOAT)
