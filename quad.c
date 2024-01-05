@@ -328,9 +328,19 @@ void affiche_quad_spim(struct Quad* quad)
 				}
 				fprintf(output, "\tbeq $t0 0 Else%u\n", liste_quad->compteur_label_else); //si la condition est fausse, ne pas exécuter le code du if
 			}
-			else if(quad->res->info.type == TYPE_FLOAT)
+			else if (quad->res->info.type == TYPE_FLOAT)
 			{
-				//TODO
+				if (quad->res->info.sorte == SORTE_VARIABLE)
+				{
+					fprintf(output, "\tl.s $f0, _%s\n", quad->res->info.nom);
+				}
+				else if (quad->res->info.sorte == SORTE_CONSTANTE)
+				{
+					fprintf(output, "\tli.s $f0, %f\n", quad->res->info.valeur_flottante);
+				}
+				fprintf(output, "\tli.s $f1, 0.0\n");
+				fprintf(output, "\tc.eq.s $f0, $f1\n");
+				fprintf(output, "\tbc1t Else%u\n", liste_quad->compteur_label_else);
 			}
 			break;
 			
