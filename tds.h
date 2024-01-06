@@ -102,11 +102,13 @@ struct noeud* ajout_queue(struct noeud* tete, struct noeud* new_queue);
 struct noeud* insertion(struct tds** tds, char* nom, enum sorte sorte, enum type type);
 
 struct noeud* insertion_tableau(struct tds** tds, char* nom, enum type type, int nombre_dimension, int taille_dimensions[MAX_DIMENSION_TABLEAU]);
+struct noeud* insertion_matrix(struct tds** tds, char* nom, int nombre_dimension, int taille_dimensions[MAX_DIMENSION_TABLEAU]);
 
 struct noeud* insertion_constante(struct tds** tds, enum type type, float valeur);
 struct noeud* insertion_constante_str(struct tds** tds, enum type type, char valeur[MAX_LONGUEUR_VARIABLE]);
 
 struct noeud* newtemp(struct tds** tds, enum type type);
+struct noeud* newtempMatrix(struct tds** tds, int nombre_dimension, int taille_dimensions[MAX_DIMENSION_TABLEAU]);
 
 struct noeud* get_symbole(struct tds* tds, char* nom);
 

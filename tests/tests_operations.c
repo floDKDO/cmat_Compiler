@@ -54,17 +54,18 @@ int main()
 		test = test - 1;
 	}
 	
-	//matrix tab_test[10] = {1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5};
+	//matrix tab[10] = {1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5};
 	
-	//printmat(tab_test);
-	
-	//matrix tab[4][3] = {{1, 2, 3},{5, 6, 7},{8, 9, 0},{4, 7, 9}};
+	matrix tab[4][3] = {{1, 2, 3},{5, 6, 7},{8, 9, 0},{4, 7, 9}};
 	
 	//matrix tab[4][3] = {{1.1, 2.1, 3.1},{5.1, 6.1, 7.1},{8.1, 9.1, 0.1},{8.2, 9.2, 0.2}};
 	
-	matrix tab[2][2] = {{7, 8},{9, 1}};
+	//matrix transpose_tab[10];
+	
+	tab = --tab;
 	
 	printmat(tab);
+	//printmat(transpose_tab);
 	
 	/*tab = tab*2;
 	

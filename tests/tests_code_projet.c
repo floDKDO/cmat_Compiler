@@ -12,6 +12,7 @@ int main() {
 	/* Calcul de X */
 	X = IA*B;
 	/* Affichage du résultat */
+	printmat(IA);
 	printf("La solution de l'équation AX=B, avec A = ");
 	printmat(A);
 	printf("et B = ");

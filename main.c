@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
 	
 	if(!r){
 		affichage_tds(tds);
-		affiche_code(liste_quad);
+		//affiche_code(liste_quad);
 		fprintf(output, "\n\n");
 		affiche_spim(liste_quad);
 	}
