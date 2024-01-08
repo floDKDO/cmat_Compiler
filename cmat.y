@@ -189,11 +189,9 @@ boucle_while : WHILE '(' {gencode(liste_quad, QOP_WHILE, NULL, NULL, NULL);} exp
 
 declaration_variable : type liste_variable_declaree 
 	{
-		//printf("LONGUEUR : %d\n", indice_tab_str);
 		for(int i = 0; i < indice_tab_str; i++) 
 		{ //mettre le type dans la tds
 			struct noeud* noeud = get_symbole(tds, $2[i]);
-			//printf("NOMS : %s\n", $2[i]);
 			if(noeud != NULL)
 			{
 				if($1 == TYPE_MATRIX)
@@ -259,18 +257,24 @@ liste_variable_declaree : liste_variable_declaree ',' variable_declaree {
 ;
 
 variable_declaree : 
-	IDENT {struct noeud* entree = insertion(&tds, $1, SORTE_VARIABLE, TYPE_NONE); /*strcpy($$, $1);*/}
+	IDENT {struct noeud* entree = insertion(&tds, $1, SORTE_VARIABLE, TYPE_NONE);
+	
+		if(entree == NULL) 
+		{
+			fprintf(stderr,"Previous declaration of %s exists\n", $1); 
+			exit(1);
+		} 
+		
+		/*strcpy($$, $1);*/}
 	| IDENT '=' expression {
     
 		struct noeud* entree = insertion(&tds, $1, SORTE_VARIABLE, TYPE_NONE);
+		
 		if(entree == NULL) 
 		{
 			fprintf(stderr,"Previous declaration of %s exists\n", $1); 
 			exit(1);
 		}
-		
-		
-        		//printf("POUET\n");
         	
         	if($3.ptr->info.sorte == SORTE_TABLEAU)
         	{		
@@ -308,14 +312,14 @@ variable_declaree :
     | IDENT intervalle_dimension '=' valeur_tableau {
     
     		struct noeud* entree = insertion_tableau(&tds, $1, $4.type_tab, $2.nDim, $2.taillesDim); 
-    		
-    		entree->info.tableau.is_matrix = false; //si c'est vraiment une matrix, cela renseigné au moment du parsage du type
     
     		if(entree == NULL) 
     		{
                	fprintf(stderr,"Previous declaration of %s exists\n", $1); 
                 	exit(1);
 		}
+		
+		entree->info.tableau.is_matrix = false; //si c'est vraiment une matrix, cela renseigné au moment du parsage du type
 		
 		if(entree->info.type == TYPE_INT)
 		{
@@ -469,6 +473,7 @@ expression : valeur
                         entree = get_symbole_constante (tds, $1.ptr->info.valeur_flottante);
         }
         else entree = get_symbole (tds, $1.ptr->info.nom);
+        
         $$.ptr = entree;
 }
 | expression '+' expression
@@ -485,54 +490,34 @@ expression : valeur
         }
         else if ($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.tableau.is_matrix == true)
         {
-        	if($3.ptr->info.tableau.is_matrix == true)
-               {
-               	//gencode addition de matrices
-               }
-               else if ($3.ptr->info.type == TYPE_FLOAT)
-               {
-               
-               }
-               else if ($3.ptr->info.type == TYPE_INT)
-               {
-               
-               }
+               $$.ptr = newtempMatrix (&tds, $1.ptr->info.tableau.nombre_dimension, $1.ptr->info.tableau.taille_dimensions); 
+               gencode (liste_quad, QOP_PLUS, $1.ptr, $3.ptr, $$.ptr);
         }
 	else if ($3.ptr->info.sorte == SORTE_TABLEAU && $3.ptr->info.tableau.is_matrix == true)
         {
-        	if($1.ptr->info.tableau.is_matrix == true)
-               {
-               	//gencode addition de matrices (fait au-dessus)
-               }
-               else if ($1.ptr->info.type == TYPE_FLOAT)
-               {
-               
-               }
-               else if ($1.ptr->info.type == TYPE_INT)
-               {
-               
-               }
+       	$$.ptr = newtempMatrix (&tds, $3.ptr->info.tableau.nombre_dimension, $3.ptr->info.tableau.taille_dimensions); 
+        	gencode (liste_quad, QOP_PLUS, $1.ptr, $3.ptr, $$.ptr);
         }
         else if ($1.ptr->info.type == TYPE_FLOAT)
         {
-                $$.ptr = newtemp (&tds, TYPE_FLOAT);
-                if ($3.ptr->info.type == TYPE_INT)
-                        {
-                                struct noeud *tmp = newtemp (&tds, TYPE_FLOAT);
-                                gencode (liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
-                                gencode (liste_quad, QOP_PLUS, $1.ptr, tmp, $$.ptr);
-                        }
-                else
-                        {
-                                gencode (liste_quad, QOP_PLUS, $1.ptr, $3.ptr, $$.ptr);
-                        }
+		$$.ptr = newtemp (&tds, TYPE_FLOAT);
+		if ($3.ptr->info.type == TYPE_INT)
+		{
+			struct noeud *tmp = newtemp (&tds, TYPE_FLOAT);
+			gencode (liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+			gencode (liste_quad, QOP_PLUS, $1.ptr, tmp, $$.ptr);
+		}
+		else //2 flottants
+		{
+			gencode (liste_quad, QOP_PLUS, $1.ptr, $3.ptr, $$.ptr);
+		}
         }
-        else if ($3.ptr->info.type == TYPE_FLOAT)
+        else if ($3.ptr->info.type == TYPE_FLOAT) //donc $1 est un INT
         {
                 struct noeud *tmp = newtemp (&tds, TYPE_FLOAT);
-                gencode (liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+                gencode (liste_quad, QOP_CAST, $1.ptr, NULL, tmp);
                 $$.ptr = newtemp (&tds, TYPE_FLOAT);
-                gencode (liste_quad, QOP_PLUS, $1.ptr, tmp, $$.ptr);
+                gencode (liste_quad, QOP_PLUS, tmp, $3.ptr, $$.ptr);
         }
         else if ($1.ptr->info.type == TYPE_INT && $3.ptr->info.type == TYPE_INT)
         {
@@ -558,33 +543,13 @@ expression : valeur
         }
         else if ($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.tableau.is_matrix == true)
         {
-        	if($3.ptr->info.tableau.is_matrix == true)
-               {
-               	//gencode soustraction de matrices
-               }
-               else if ($3.ptr->info.type == TYPE_FLOAT)
-               {
-               
-               }
-               else if ($3.ptr->info.type == TYPE_INT)
-               {
-               
-               }
+               $$.ptr = newtempMatrix (&tds, $1.ptr->info.tableau.nombre_dimension, $1.ptr->info.tableau.taille_dimensions); 
+               gencode (liste_quad, QOP_MINUS, $1.ptr, $3.ptr, $$.ptr);
         }
 	else if ($3.ptr->info.sorte == SORTE_TABLEAU && $3.ptr->info.tableau.is_matrix == true)
         {
-        	if($1.ptr->info.tableau.is_matrix == true)
-               {
-               	//gencode soustraction de matrices (fait au-dessus)
-               }
-               else if ($1.ptr->info.type == TYPE_FLOAT)
-               {
-               
-               }
-               else if ($1.ptr->info.type == TYPE_INT)
-               {
-               
-               }
+               $$.ptr = newtempMatrix (&tds, $3.ptr->info.tableau.nombre_dimension, $3.ptr->info.tableau.taille_dimensions); 
+               gencode (liste_quad, QOP_MINUS, $1.ptr, $3.ptr, $$.ptr);
         }
         else if ($1.ptr->info.type == TYPE_FLOAT)
         {
@@ -595,17 +560,17 @@ expression : valeur
                         gencode (liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
                         gencode (liste_quad, QOP_MINUS, $1.ptr, tmp, $$.ptr);
                 }
-                else
+                else //2 flottants
                 {
                         gencode (liste_quad, QOP_MINUS, $1.ptr, $3.ptr, $$.ptr);
                 }
         }
-        else if ($3.ptr->info.type == TYPE_FLOAT)
+        else if ($3.ptr->info.type == TYPE_FLOAT) //donc $1 est un INT
         {
                 struct noeud *tmp = newtemp (&tds, TYPE_FLOAT);
-                gencode (liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+                gencode (liste_quad, QOP_CAST, $1.ptr, NULL, tmp);
                 $$.ptr = newtemp (&tds, TYPE_FLOAT);
-                gencode (liste_quad, QOP_MINUS, $1.ptr, tmp, $$.ptr);
+                gencode (liste_quad, QOP_MINUS, tmp, $3.ptr, $$.ptr);
         }
         else if ($1.ptr->info.type == TYPE_INT && $3.ptr->info.type == TYPE_INT)
         {
@@ -629,56 +594,36 @@ expression : valeur
                 yyerror ("* avec des tableaux");
                 $$.ptr = newtemp (&tds, TYPE_ERROR);
         }
-        else if ($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.tableau.is_matrix == true)
+	else if ($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.tableau.is_matrix == true)
         {
-        	if($3.ptr->info.tableau.is_matrix == true)
-               {
-               	//gencodemultiplication de matrices
-               }
-               else if ($3.ptr->info.type == TYPE_FLOAT)
-               {
-               
-               }
-               else if ($3.ptr->info.type == TYPE_INT)
-               {
-               
-               }
+               $$.ptr = newtempMatrix (&tds, $1.ptr->info.tableau.nombre_dimension, $1.ptr->info.tableau.taille_dimensions); 
+               gencode (liste_quad, QOP_MULT, $1.ptr, $3.ptr, $$.ptr);
         }
 	else if ($3.ptr->info.sorte == SORTE_TABLEAU && $3.ptr->info.tableau.is_matrix == true)
         {
-        	if($1.ptr->info.tableau.is_matrix == true)
-               {
-               	//gencode multiplication de matrices (fait au-dessus)
-               }
-               else if ($1.ptr->info.type == TYPE_FLOAT)
-               {
-               
-               }
-               else if ($1.ptr->info.type == TYPE_INT)
-               {
-               
-               }
+               $$.ptr = newtempMatrix (&tds, $3.ptr->info.tableau.nombre_dimension, $3.ptr->info.tableau.taille_dimensions); 
+               gencode (liste_quad, QOP_MULT, $1.ptr, $3.ptr, $$.ptr);
         }
         else if ($1.ptr->info.type == TYPE_FLOAT)
         {
                 $$.ptr = newtemp (&tds, TYPE_FLOAT);
                 if ($3.ptr->info.type == TYPE_INT)
-                        {
-                                struct noeud *tmp = newtemp (&tds, TYPE_FLOAT);
-                                gencode (liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
-                                gencode (liste_quad, QOP_MULT, $1.ptr, tmp, $$.ptr);
-                        }
-                else
-                        {
-                                gencode (liste_quad, QOP_MULT, $1.ptr, $3.ptr, $$.ptr);
-                        }
+                {
+                        struct noeud *tmp = newtemp (&tds, TYPE_FLOAT);
+                        gencode (liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+                        gencode (liste_quad, QOP_MULT, $1.ptr, tmp, $$.ptr);
+                }
+        	else //2 flottants
+                {
+                        gencode (liste_quad, QOP_MULT, $1.ptr, $3.ptr, $$.ptr);
+                }
         }
-        else if ($3.ptr->info.type == TYPE_FLOAT)
+        else if ($3.ptr->info.type == TYPE_FLOAT) //donc $1 est un INT
         {
                 struct noeud *tmp = newtemp (&tds, TYPE_FLOAT);
-                gencode (liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+                gencode (liste_quad, QOP_CAST, $1.ptr, NULL, tmp);
                 $$.ptr = newtemp (&tds, TYPE_FLOAT);
-                gencode (liste_quad, QOP_MULT, $1.ptr, tmp, $$.ptr);
+                gencode (liste_quad, QOP_MULT, tmp, $3.ptr, $$.ptr);
         }
         else if ($1.ptr->info.type == TYPE_INT && $3.ptr->info.type == TYPE_INT)
         {
@@ -702,35 +647,15 @@ expression : valeur
                 yyerror ("/ avec des tableaux");
                 $$.ptr = newtemp (&tds, TYPE_ERROR);
         }
-        else if ($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.tableau.is_matrix == true)
+	else if ($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.tableau.is_matrix == true)
         {
-        	if($3.ptr->info.tableau.is_matrix == true)
-               {
-               	//gencode division de matrices
-               }
-               else if ($3.ptr->info.type == TYPE_FLOAT)
-               {
-               
-               }
-               else if ($3.ptr->info.type == TYPE_INT)
-               {
-               
-               }
+               $$.ptr = newtempMatrix (&tds, $1.ptr->info.tableau.nombre_dimension, $1.ptr->info.tableau.taille_dimensions); 
+               gencode (liste_quad, QOP_DIV, $1.ptr, $3.ptr, $$.ptr);
         }
 	else if ($3.ptr->info.sorte == SORTE_TABLEAU && $3.ptr->info.tableau.is_matrix == true)
         {
-        	if($1.ptr->info.tableau.is_matrix == true)
-               {
-               	//gencode division de matrices (fait au-dessus)
-               }
-               else if ($1.ptr->info.type == TYPE_FLOAT)
-               {
-               
-               }
-               else if ($1.ptr->info.type == TYPE_INT)
-               {
-               
-               }
+               $$.ptr = newtempMatrix (&tds, $3.ptr->info.tableau.nombre_dimension, $3.ptr->info.tableau.taille_dimensions); 
+               gencode (liste_quad, QOP_DIV, $1.ptr, $3.ptr, $$.ptr);
         }
         else if ($1.ptr->info.type == TYPE_FLOAT)
         {
@@ -741,17 +666,17 @@ expression : valeur
                         gencode (liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
                         gencode (liste_quad, QOP_DIV, $1.ptr, tmp, $$.ptr);
                 }
-                else
+                else //2 flottants
                 {
                         gencode (liste_quad, QOP_DIV, $1.ptr, $3.ptr, $$.ptr);
                 }
         }
-        else if ($3.ptr->info.type == TYPE_FLOAT)
+        else if ($3.ptr->info.type == TYPE_FLOAT) //donc $1 est un INT
         {
                 struct noeud *tmp = newtemp (&tds, TYPE_FLOAT);
-                gencode (liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+                gencode (liste_quad, QOP_CAST, $1.ptr, NULL, tmp);
                 $$.ptr = newtemp (&tds, TYPE_FLOAT);
-                gencode (liste_quad, QOP_DIV, $1.ptr, tmp, $$.ptr);
+                gencode (liste_quad, QOP_DIV, tmp, $3.ptr, $$.ptr);
         }
         else if ($1.ptr->info.type == TYPE_INT && $3.ptr->info.type == TYPE_INT)
         {
@@ -848,24 +773,24 @@ expression : valeur
         }
         else if ($1.ptr->info.type == TYPE_FLOAT)
         {
-                $$.ptr = newtemp (&tds, TYPE_INT);
+                $$.ptr = newtemp (&tds, TYPE_FLOAT);
                 if ($3.ptr->info.type == TYPE_INT)
                 {
                         struct noeud *tmp = newtemp (&tds, TYPE_FLOAT);
                         gencode (liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
                         gencode (liste_quad, QOP_GT, $1.ptr, tmp, $$.ptr);
                 }
-                else
+                else //2 flottants
                 {
                         gencode (liste_quad, QOP_GT, $1.ptr, $3.ptr, $$.ptr);
                 }
         }
-        else if ($3.ptr->info.type == TYPE_FLOAT)
+        else if ($3.ptr->info.type == TYPE_FLOAT) //donc $1 est un INT
         {
                 struct noeud *tmp = newtemp (&tds, TYPE_FLOAT);
-                gencode (liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
-                $$.ptr = newtemp (&tds, TYPE_INT);
-                gencode (liste_quad, QOP_GT, $1.ptr, tmp, $$.ptr);
+                gencode (liste_quad, QOP_CAST, $1.ptr, NULL, tmp);
+                $$.ptr = newtemp (&tds, TYPE_FLOAT);
+                gencode (liste_quad, QOP_GT, tmp, $3.ptr, $$.ptr);
         }
         else if ($1.ptr->info.type == TYPE_INT && $3.ptr->info.type == TYPE_INT)
         {
@@ -890,24 +815,24 @@ expression : valeur
         }
         else if ($1.ptr->info.type == TYPE_FLOAT)
         {
-                $$.ptr = newtemp (&tds, TYPE_INT);
+                $$.ptr = newtemp (&tds, TYPE_FLOAT);
                 if ($3.ptr->info.type == TYPE_INT)
                 {
                         struct noeud *tmp = newtemp (&tds, TYPE_FLOAT);
                         gencode (liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
                         gencode (liste_quad, QOP_LT, $1.ptr, tmp, $$.ptr);
                 }
-                else
+                else //2 flottants
                 {
                         gencode (liste_quad, QOP_LT, $1.ptr, $3.ptr, $$.ptr);
                 }
         }
-        else if ($3.ptr->info.type == TYPE_FLOAT)
+        else if ($3.ptr->info.type == TYPE_FLOAT) //donc $1 est un INT
         {
                 struct noeud *tmp = newtemp (&tds, TYPE_FLOAT);
-                gencode (liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+                gencode (liste_quad, QOP_CAST, $1.ptr, NULL, tmp);
                 $$.ptr = newtemp (&tds, TYPE_FLOAT);
-                gencode (liste_quad, QOP_LT, $1.ptr, tmp, $$.ptr);
+                gencode (liste_quad, QOP_LT, tmp, $3.ptr, $$.ptr);
         }
         else if ($1.ptr->info.type == TYPE_INT && $3.ptr->info.type == TYPE_INT)
         {
@@ -932,24 +857,24 @@ expression : valeur
         }
         else if ($1.ptr->info.type == TYPE_FLOAT)
         {
-                $$.ptr = newtemp (&tds, TYPE_INT);
+                $$.ptr = newtemp (&tds, TYPE_FLOAT);
                 if ($3.ptr->info.type == TYPE_INT)
                 {
                         struct noeud *tmp = newtemp (&tds, TYPE_FLOAT);
                         gencode (liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
                         gencode (liste_quad, QOP_LE, $1.ptr, tmp, $$.ptr);
                 }
-                else
+                else //2 flottants
                 {
                         gencode (liste_quad, QOP_LE, $1.ptr, $3.ptr, $$.ptr);
                 }
         }
-        else if ($3.ptr->info.type == TYPE_FLOAT)
+        else if ($3.ptr->info.type == TYPE_FLOAT) //donc $1 est un INT
         {
                 struct noeud *tmp = newtemp (&tds, TYPE_FLOAT);
-                gencode (liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+                gencode (liste_quad, QOP_CAST, $1.ptr, NULL, tmp);
                 $$.ptr = newtemp (&tds, TYPE_FLOAT);
-                gencode (liste_quad, QOP_LE, $1.ptr, tmp, $$.ptr);
+                gencode (liste_quad, QOP_LE, tmp, $3.ptr, $$.ptr);
         }
         else if ($1.ptr->info.type == TYPE_INT && $3.ptr->info.type == TYPE_INT)
         {
@@ -974,24 +899,24 @@ expression : valeur
         }
         else if ($1.ptr->info.type == TYPE_FLOAT)
         {
-                $$.ptr = newtemp (&tds, TYPE_INT);
+                $$.ptr = newtemp (&tds, TYPE_FLOAT);
                 if ($3.ptr->info.type == TYPE_INT)
                 {
                         struct noeud *tmp = newtemp (&tds, TYPE_FLOAT);
                         gencode (liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
                         gencode (liste_quad, QOP_GE, $1.ptr, tmp, $$.ptr);
                 }
-                else
+                else //2 flottants
                 {
                         gencode (liste_quad, QOP_GE, $1.ptr, $3.ptr, $$.ptr);
                 }
         }
-        else if ($3.ptr->info.type == TYPE_FLOAT)
+        else if ($3.ptr->info.type == TYPE_FLOAT) //donc $1 est un INT
         {
                 struct noeud *tmp = newtemp (&tds, TYPE_FLOAT);
-                gencode (liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+                gencode (liste_quad, QOP_CAST, $1.ptr, NULL, tmp);
                 $$.ptr = newtemp (&tds, TYPE_FLOAT);
-                gencode (liste_quad, QOP_GE, $1.ptr, tmp, $$.ptr);
+                gencode (liste_quad, QOP_GE, tmp, $3.ptr, $$.ptr);
         }
         else if ($1.ptr->info.type == TYPE_INT && $3.ptr->info.type == TYPE_INT)
         {
@@ -1016,24 +941,24 @@ expression : valeur
         }
         else if ($1.ptr->info.type == TYPE_FLOAT)
         {
-                $$.ptr = newtemp (&tds, TYPE_INT);
+                $$.ptr = newtemp (&tds, TYPE_FLOAT);
                 if ($3.ptr->info.type == TYPE_INT)
                 {
                         struct noeud *tmp = newtemp (&tds, TYPE_FLOAT);
                         gencode (liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
                         gencode (liste_quad, QOP_EQ, $1.ptr, tmp, $$.ptr);
                 }
-                else
+                else //2 flottants
                 {
                         gencode (liste_quad, QOP_EQ, $1.ptr, $3.ptr, $$.ptr);
                 }
         }
-        else if ($3.ptr->info.type == TYPE_FLOAT)
+        else if ($3.ptr->info.type == TYPE_FLOAT) //donc $1 est un INT
         {
                 struct noeud *tmp = newtemp (&tds, TYPE_FLOAT);
-                gencode (liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+                gencode (liste_quad, QOP_CAST, $1.ptr, NULL, tmp);
                 $$.ptr = newtemp (&tds, TYPE_FLOAT);
-                gencode (liste_quad, QOP_EQ, $1.ptr, tmp, $$.ptr);
+                gencode (liste_quad, QOP_EQ, tmp, $3.ptr, $$.ptr);
         }
         else if ($1.ptr->info.type == TYPE_INT && $3.ptr->info.type == TYPE_INT)
         {
@@ -1058,24 +983,24 @@ expression : valeur
         }
         else if ($1.ptr->info.type == TYPE_FLOAT)
         {
-                $$.ptr = newtemp (&tds, TYPE_INT);
+                $$.ptr = newtemp (&tds, TYPE_FLOAT);
                 if ($3.ptr->info.type == TYPE_INT)
                 {
                         struct noeud *tmp = newtemp (&tds, TYPE_FLOAT);
                         gencode (liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
                         gencode (liste_quad, QOP_NE, $1.ptr, tmp, $$.ptr);
                 }
-        	else
+        	else //2 flottants
                 {
                         gencode (liste_quad, QOP_NE, $1.ptr, $3.ptr, $$.ptr);
                 }
         }
-        else if ($3.ptr->info.type == TYPE_FLOAT)
+        else if ($3.ptr->info.type == TYPE_FLOAT) //donc $1 est un INT
         {
                 struct noeud *tmp = newtemp (&tds, TYPE_FLOAT);
-                gencode (liste_quad, QOP_CAST, $3.ptr, NULL, tmp);
+                gencode (liste_quad, QOP_CAST, $1.ptr, NULL, tmp);
                 $$.ptr = newtemp (&tds, TYPE_FLOAT);
-                gencode (liste_quad, QOP_NE, $1.ptr, tmp, $$.ptr);
+                gencode (liste_quad, QOP_NE, tmp, $3.ptr, $$.ptr);
         }
         else if ($1.ptr->info.type == TYPE_INT && $3.ptr->info.type == TYPE_INT)
         {
@@ -1197,39 +1122,11 @@ expression : valeur
         }
         else if ($2.ptr->info.sorte == SORTE_TABLEAU && $2.ptr->info.tableau.is_matrix == true)
         {
-                /*if($2.ptr->info.tableau.nombre_dimension == 1)
-                {
-        		//trois cas : vecteur colonne, vecteur ligne ou vecteur à un élément
-			if($2.ptr->info.tableau.taille_dimensions[0] == 1 && $2.ptr->info.tableau.taille_dimensions[1] != 1)
-			{
-				int taille_dimensions_transposee[MAX_DIMENSION_TABLEAU] = {$2.ptr->info.tableau.taille_dimensions[1], 1};
-				$$.ptr = newtempMatrix (&tds, $2.ptr->info.tableau.nombre_dimension, taille_dimensions_transposee); 
-                
-             	 gencode(liste_quad, QOP_NEG, $2.ptr, NULL, $$.ptr);
-			}
-			else if($2.ptr->info.tableau.taille_dimensions[0] != 1 && $2.ptr->info.tableau.taille_dimensions[1] == 1)
-			{
-				int taille_dimensions_transposee[MAX_DIMENSION_TABLEAU] = {1, $2.ptr->info.tableau.taille_dimensions[0]};
-				$$.ptr = newtempMatrix (&tds, $2.ptr->info.tableau.nombre_dimension, taille_dimensions_transposee); 
-                
-             	 gencode(liste_quad, QOP_NEG, $2.ptr, NULL, $$.ptr);
-			}
-			else if($2.ptr->info.tableau.taille_dimensions[0] == 1 && $2.ptr->info.tableau.taille_dimensions[1] == 1)
-			{
-				int taille_dimensions_transposee[MAX_DIMENSION_TABLEAU] = {1, 1};
-				$$.ptr = newtempMatrix (&tds, $2.ptr->info.tableau.nombre_dimension, taille_dimensions_transposee); 
-                
-             	 gencode(liste_quad, QOP_NEG, $2.ptr, NULL, $$.ptr);
-			}
-                }
-                else*/ if($2.ptr->info.tableau.nombre_dimension == 2)
-                {
-                	//transposée : inverser taille colonne et ligne
-                	int taille_dimensions_transposee[MAX_DIMENSION_TABLEAU] = {$2.ptr->info.tableau.taille_dimensions[1], $2.ptr->info.tableau.taille_dimensions[0]};
-                	$$.ptr = newtempMatrix (&tds, $2.ptr->info.tableau.nombre_dimension, taille_dimensions_transposee); 
-                
-             	 gencode(liste_quad, QOP_NEG, $2.ptr, NULL, $$.ptr);
-                }
+		//transposée : inverser taille colonne et ligne
+		int taille_dimensions_transposee[MAX_DIMENSION_TABLEAU] = {$2.ptr->info.tableau.taille_dimensions[1], $2.ptr->info.tableau.taille_dimensions[0]};
+		$$.ptr = newtempMatrix (&tds, $2.ptr->info.tableau.nombre_dimension, taille_dimensions_transposee); 
+
+		gencode(liste_quad, QOP_NEG, $2.ptr, NULL, $$.ptr);
         }
         else if ($2.ptr->info.type == TYPE_INT)
         {
@@ -1388,7 +1285,10 @@ valeur :
     | incr_et_decr {
 			struct noeud* entree = get_symbole(tds, $1.ptr->info.nom); 
 		    if(entree == NULL) {
-				entree = insertion(&tds, $1.ptr->info.nom, SORTE_VARIABLE, TYPE_NONE);
+				char err_msg[MAX_LENGTH_VAR_NAME + 20];
+				sprintf(err_msg, "Undeclared name : '%s'", $1.ptr->info.nom);
+				yyerror(err_msg);
+				entree = insertion(&tds, $1.ptr->info.nom, SORTE_NONE, TYPE_ERROR);
 			}
 			$$.ptr = entree;
 		}

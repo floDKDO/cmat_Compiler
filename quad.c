@@ -402,6 +402,12 @@ void affiche_quad_spim(struct Quad* quad)
 						{
 							int offset = quad->arg1->info.valeur_entiere * 4; //4 = sizeof(int) en MIPS
 							
+							if(offset > (quad->res->info.tableau.taille_dimensions[0]* 4) - 4)
+							{
+								fprintf(stderr, "Indice [%d] demandé dépasse la taille du tableau %s[%d]\n", quad->arg1->info.valeur_entiere, quad->res->info.nom, quad->res->info.tableau.taille_dimensions[0]);
+								exit(1);
+							}
+							
 							fprintf(output, "\tla $t0 _%s\n", quad->res->info.nom);
 							fprintf(output, "\tlw $a0 %d($t0)\n", offset);
 							fprintf(output, "\tli $v0, 1\n");
@@ -409,6 +415,12 @@ void affiche_quad_spim(struct Quad* quad)
 						else if (quad->res->info.type == TYPE_FLOAT) 
 						{
 							int offset = quad->arg1->info.valeur_entiere * 4; //4 = sizeof(float) en MIPS
+							
+							if(offset > (quad->res->info.tableau.taille_dimensions[0]* 4) - 4)
+							{
+								fprintf(stderr, "Indice [%d] demandé dépasse la taille du tableau %s[%d]\n", quad->arg1->info.valeur_entiere, quad->res->info.nom, quad->res->info.tableau.taille_dimensions[0]);
+								exit(1);
+							}
 						
 							fprintf(output, "\tla $t0 _%s\n", quad->res->info.nom);
 							fprintf(output, "\tl.s $f12 %d($t0)\n", offset);
@@ -442,6 +454,12 @@ void affiche_quad_spim(struct Quad* quad)
 						{
 							int offset = (quad->arg1->info.valeur_entiere * quad->res->info.tableau.taille_dimensions[1] + quad->arg2->info.valeur_entiere) * 4;
 							
+							if(offset > (quad->res->info.tableau.taille_dimensions[0] * quad->res->info.tableau.taille_dimensions[1] * 4) - 4)
+							{
+								fprintf(stderr, "Indices [%d][%d] demandés dépassent la taille du tableau %s[%d][%d]\n", quad->arg1->info.valeur_entiere, quad->arg2->info.valeur_entiere, quad->res->info.nom, quad->res->info.tableau.taille_dimensions[0], quad->res->info.tableau.taille_dimensions[1]);
+								exit(1);
+							}
+							
 							fprintf(output, "\tla $t0 _%s\n", quad->res->info.nom);
 							fprintf(output, "\tlw $a0 %d($t0)\n", offset);
 							fprintf(output, "\tli $v0, 1\n");
@@ -449,6 +467,12 @@ void affiche_quad_spim(struct Quad* quad)
 						else if (quad->res->info.type == TYPE_FLOAT) 
 						{
 							int offset = (quad->arg1->info.valeur_entiere * quad->res->info.tableau.taille_dimensions[1] + quad->arg2->info.valeur_entiere) * 4;
+							
+							if(offset > (quad->res->info.tableau.taille_dimensions[0] * quad->res->info.tableau.taille_dimensions[1] * 4) - 4)
+							{
+								fprintf(stderr, "Indices [%d][%d] demandés dépassent la taille du tableau %s[%d][%d]\n", quad->arg1->info.valeur_entiere, quad->arg2->info.valeur_entiere, quad->res->info.nom, quad->res->info.tableau.taille_dimensions[0], quad->res->info.tableau.taille_dimensions[1]);
+								exit(1);
+							}
 						
 							fprintf(output, "\tla $t0 _%s\n", quad->res->info.nom);
 							fprintf(output, "\tl.s $f12 %d($t0)\n", offset);
@@ -458,6 +482,7 @@ void affiche_quad_spim(struct Quad* quad)
 					else
 					{
 						fprintf(output, "\tla $t0 _%s\n", quad->res->info.nom); //adresse de base du tableau
+							
 						if(quad->arg1->info.sorte == SORTE_VARIABLE)
 						{
 							fprintf(output, "\tlw $t1 _%s\n", quad->arg1->info.nom); //récupérer valeur indice 1 (variable)
@@ -628,12 +653,12 @@ void affiche_quad_spim(struct Quad* quad)
 				
 				if(quad->res->info.tableau.nombre_dimension == 1)
 				{
-					//longueur du tableau
+					//i = longueur du tableau 
 					fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0]);
 				}
 				else
 				{
-					//longueur du tableau
+					//i = longueur du tableau
 					fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0] * quad->res->info.tableau.taille_dimensions[1]);
 				}
 
@@ -642,7 +667,7 @@ void affiche_quad_spim(struct Quad* quad)
 				
 				fprintf(output, "\tl.s $f3, _constante_float_incr\n");
 				
-				// +1
+				// +1.0
 				fprintf(output, "\tadd.s $f2, $f2, $f3\n");  
 
 				fprintf(output, "\ts.s $f2, 0($s0)\n");
@@ -690,12 +715,12 @@ void affiche_quad_spim(struct Quad* quad)
 				
 				if(quad->res->info.tableau.nombre_dimension == 1)
 				{
-					//longueur du tableau
+					//i = longueur du tableau
 					fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0]);
 				}
 				else
 				{
-					//longueur du tableau
+					//i = longueur du tableau
 					fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0] * quad->res->info.tableau.taille_dimensions[1]);
 				}
 
@@ -752,12 +777,12 @@ void affiche_quad_spim(struct Quad* quad)
 				
 				if(quad->res->info.tableau.nombre_dimension == 1)
 				{
-					//longueur du tableau
+					//i = longueur du tableau
 					fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0]);
 				}
 				else
 				{
-					//longueur du tableau
+					//i = longueur du tableau
 					fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0] * quad->res->info.tableau.taille_dimensions[1]);
 				}
 
@@ -814,12 +839,12 @@ void affiche_quad_spim(struct Quad* quad)
 				
 				if(quad->res->info.tableau.nombre_dimension == 1)
 				{
-					//longueur du tableau 
+					//i = longueur du tableau 
 					fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0]);
 				}
 				else
 				{
-					//longueur du tableau 
+					//i = longueur du tableau 
 					fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0] * quad->res->info.tableau.taille_dimensions[1]);
 				}
 
@@ -846,6 +871,7 @@ void affiche_quad_spim(struct Quad* quad)
 			break;
 	
 		case QOP_PLUS:
+		
 			if (quad->res->info.type == TYPE_INT) 
 			{
 				if (quad->arg1->info.sorte == SORTE_CONSTANTE) {
@@ -878,7 +904,167 @@ void affiche_quad_spim(struct Quad* quad)
 			}
 			else if (quad->res->info.tableau.is_matrix == true)
 			{
-				//TODO
+				if (quad->arg1->info.sorte == SORTE_TABLEAU && quad->arg1->info.tableau.is_matrix == true && quad->arg2->info.sorte == SORTE_CONSTANTE)
+				{
+					if(quad->res->info.tableau.nombre_dimension == 2)
+					{
+						for(int i = 0; i < quad->arg1->info.tableau.taille_dimensions[0] * quad->arg1->info.tableau.taille_dimensions[1]; i++)
+						{
+							quad->res->info.tableau.valeurs_flottantes_tableau[i] += quad->arg2->info.valeur_flottante; //commenter ?
+						}
+					}
+					
+					fprintf(output, "\tla $s0, _%s\n", quad->res->info.nom);
+					fprintf(output, "\tla $s1, _%s\n", quad->arg1->info.nom);
+					
+					if(quad->res->info.tableau.nombre_dimension == 1)
+					{
+						//i = longueur du tableau
+						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0]);
+					}
+					else
+					{
+						//i = longueur du tableau
+						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0] * quad->res->info.tableau.taille_dimensions[1]);
+					}
+
+					fprintf(output, "Loop%d:\n", liste_quad->compteur_label_loop);
+					fprintf(output, "\tl.s $f2, 0($s1)\n");
+					
+					if(quad->arg2->info.type == TYPE_FLOAT)
+					{
+						fprintf(output, "\tli.s $f3 %f\n", quad->arg2->info.valeur_flottante);
+					}
+					else if(quad->arg2->info.type == TYPE_INT) //cast
+					{
+						fprintf(output, "\tli $t1 %d\n", quad->arg2->info.valeur_entiere);
+						fprintf(output, "\tmtc1 $t1 $f0\n");
+						fprintf(output, "\tcvt.s.w $f0 $f0\n");
+						fprintf(output, "\tmov.s $f3 $f0\n");
+					}
+					
+					// +constante
+					fprintf(output, "\tadd.s $f2, $f2, $f3\n");  
+
+					fprintf(output, "\ts.s $f2, 0($s0)\n");
+
+					//prochain élément
+					fprintf(output, "\taddi $s0, $s0, 4\n");
+					fprintf(output, "\taddi $s1, $s1, 4\n");
+
+					//i--
+					fprintf(output, "\taddi $t0, $t0, -1\n");
+
+					//Continue the loop if the loop counter is not zero
+					fprintf(output, "\tbnez $t0, Loop%d\n", liste_quad->compteur_label_loop);
+					liste_quad->compteur_label_loop += 1;
+					
+				}
+				else if (quad->arg2->info.sorte == SORTE_TABLEAU && quad->arg2->info.tableau.is_matrix == true && quad->arg1->info.sorte == SORTE_CONSTANTE)
+				{
+					if(quad->res->info.tableau.nombre_dimension == 2)
+					{
+						for(int i = 0; i < quad->arg2->info.tableau.taille_dimensions[0] * quad->arg2->info.tableau.taille_dimensions[1]; i++)
+						{
+							quad->res->info.tableau.valeurs_flottantes_tableau[i] += quad->arg1->info.valeur_flottante; //commenter ?
+						}
+					}
+					
+					fprintf(output, "\tla $s0, _%s\n", quad->res->info.nom);
+					fprintf(output, "\tla $s1, _%s\n", quad->arg2->info.nom);
+					
+					if(quad->res->info.tableau.nombre_dimension == 1)
+					{
+						//i = longueur du tableau
+						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0]);
+					}
+					else
+					{
+						//i = longueur du tableau
+						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0] * quad->res->info.tableau.taille_dimensions[1]);
+					}
+
+					fprintf(output, "Loop%d:\n", liste_quad->compteur_label_loop);
+					fprintf(output, "\tl.s $f2, 0($s1)\n");
+					
+					if(quad->arg1->info.type == TYPE_FLOAT)
+					{
+						fprintf(output, "\tli.s $f3 %f\n", quad->arg1->info.valeur_flottante);
+					}
+					else if(quad->arg1->info.type == TYPE_INT) //cast
+					{
+						fprintf(output, "\tli $t1 %d\n", quad->arg1->info.valeur_entiere);
+						fprintf(output, "\tmtc1 $t1 $f0\n");
+						fprintf(output, "\tcvt.s.w $f0 $f0\n");
+						fprintf(output, "\tmov.s $f3 $f0\n");
+					}
+					
+					// +constante
+					fprintf(output, "\tadd.s $f2, $f2, $f3\n");  
+
+					fprintf(output, "\ts.s $f2, 0($s0)\n");
+
+					//prochain élément
+					fprintf(output, "\taddi $s0, $s0, 4\n");
+					fprintf(output, "\taddi $s1, $s1, 4\n");
+
+					//i--
+					fprintf(output, "\taddi $t0, $t0, -1\n");
+
+					//Continue the loop if the loop counter is not zero
+					fprintf(output, "\tbnez $t0, Loop%d\n", liste_quad->compteur_label_loop);
+					liste_quad->compteur_label_loop += 1;
+					
+				}
+				else if (quad->arg1->info.sorte == SORTE_TABLEAU && quad->arg1->info.tableau.is_matrix == true && quad->arg2->info.sorte == SORTE_TABLEAU && quad->arg2->info.tableau.is_matrix == true)
+				{
+				
+					//test de validité de l'opération d'addition => res = arg1 + arg2, les trois matrices doivent être de mêmes tailles
+					if(quad->res->info.tableau.taille_dimensions[0] != quad->arg1->info.tableau.taille_dimensions[0] || quad->res->info.tableau.taille_dimensions[0] != quad->arg2->info.tableau.taille_dimensions[0] || quad->res->info.tableau.taille_dimensions[1] != quad->arg1->info.tableau.taille_dimensions[1] || quad->res->info.tableau.taille_dimensions[1] != quad->arg2->info.tableau.taille_dimensions[1] || quad->arg1->info.tableau.taille_dimensions[0] != quad->arg2->info.tableau.taille_dimensions[0] || quad->arg1->info.tableau.taille_dimensions[1] != quad->arg2->info.tableau.taille_dimensions[1])
+					{
+						fprintf(stderr,"Les trois matrices %s(%d, %d), %s(%d, %d) et %s(%d, %d) ne sont pas de tailles égales : erreur pour une addition!\n", quad->res->info.nom, quad->res->info.tableau.taille_dimensions[0], quad->res->info.tableau.taille_dimensions[1], quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0], quad->arg1->info.tableau.taille_dimensions[1], quad->arg2->info.nom, quad->arg2->info.tableau.taille_dimensions[0], quad->arg2->info.tableau.taille_dimensions[1]); 
+						exit(1);
+					}
+				
+					//cas deux matrices : matrice1 + matrice2
+					
+					fprintf(output, "\tla $s0, _%s\n", quad->res->info.nom);
+					fprintf(output, "\tla $s1, _%s\n", quad->arg1->info.nom);
+					fprintf(output, "\tla $s2, _%s\n", quad->arg2->info.nom);
+					
+					if(quad->res->info.tableau.nombre_dimension == 1)
+					{
+						//i = longueur du tableau
+						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0]);
+					}
+					else
+					{
+						//i = longueur du tableau
+						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0] * quad->res->info.tableau.taille_dimensions[1]);
+					}
+
+					fprintf(output, "Loop%d:\n", liste_quad->compteur_label_loop);
+					fprintf(output, "\tl.s $f2, 0($s1)\n");
+					fprintf(output, "\tl.s $f4, 0($s2)\n");
+					
+					// matrice + matrice
+					fprintf(output, "\tadd.s $f2, $f2, $f4\n");  
+
+					fprintf(output, "\ts.s $f2, 0($s0)\n");
+
+					//prochain élément
+					fprintf(output, "\taddi $s0, $s0, 4\n");
+					fprintf(output, "\taddi $s1, $s1, 4\n");
+					fprintf(output, "\taddi $s2, $s2, 4\n");
+
+					//i--
+					fprintf(output, "\taddi $t0, $t0, -1\n");
+
+					//Continue the loop if the loop counter is not zero
+					fprintf(output, "\tbnez $t0, Loop%d\n", liste_quad->compteur_label_loop);
+					liste_quad->compteur_label_loop += 1;
+					
+				}
 			}
 			break;
 		case QOP_MINUS:
@@ -914,7 +1100,167 @@ void affiche_quad_spim(struct Quad* quad)
 			}
 			else if (quad->res->info.tableau.is_matrix == true)
 			{
-				//TODO
+				if (quad->arg1->info.sorte == SORTE_TABLEAU && quad->arg1->info.tableau.is_matrix == true && quad->arg2->info.sorte == SORTE_CONSTANTE)
+				{
+					if(quad->res->info.tableau.nombre_dimension == 2)
+					{
+						for(int i = 0; i < quad->arg1->info.tableau.taille_dimensions[0] * quad->arg1->info.tableau.taille_dimensions[1]; i++)
+						{
+							quad->res->info.tableau.valeurs_flottantes_tableau[i] -= quad->arg2->info.valeur_flottante;
+						}
+					}
+					
+					fprintf(output, "\tla $s0, _%s\n", quad->res->info.nom);
+					fprintf(output, "\tla $s1, _%s\n", quad->arg1->info.nom);
+					
+					if(quad->res->info.tableau.nombre_dimension == 1)
+					{
+						//i = longueur du tableau
+						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0]);
+					}
+					else
+					{
+						//i = longueur du tableau
+						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0] * quad->res->info.tableau.taille_dimensions[1]);
+					}
+
+					fprintf(output, "Loop%d:\n", liste_quad->compteur_label_loop);
+					fprintf(output, "\tl.s $f2, 0($s1)\n");
+					
+					if(quad->arg2->info.type == TYPE_FLOAT)
+					{
+						fprintf(output, "\tli.s $f3 %f\n", quad->arg2->info.valeur_flottante);
+					}
+					else if(quad->arg2->info.type == TYPE_INT) //cast
+					{
+						fprintf(output, "\tli $t1 %d\n", quad->arg2->info.valeur_entiere);
+						fprintf(output, "\tmtc1 $t1 $f0\n");
+						fprintf(output, "\tcvt.s.w $f0 $f0\n");
+						fprintf(output, "\tmov.s $f3 $f0\n");
+					}
+					
+					// - constante
+					fprintf(output, "\tsub.s $f2, $f2, $f3\n");  
+
+					fprintf(output, "\ts.s $f2, 0($s0)\n");
+
+					//prochain élément
+					fprintf(output, "\taddi $s0, $s0, 4\n");
+					fprintf(output, "\taddi $s1, $s1, 4\n");
+
+					//i--
+					fprintf(output, "\taddi $t0, $t0, -1\n");
+
+					//Continue the loop if the loop counter is not zero
+					fprintf(output, "\tbnez $t0, Loop%d\n", liste_quad->compteur_label_loop);
+					liste_quad->compteur_label_loop += 1;
+				}
+				else if (quad->arg2->info.sorte == SORTE_TABLEAU && quad->arg2->info.tableau.is_matrix == true && quad->arg1->info.sorte == SORTE_CONSTANTE)
+				{
+					if(quad->res->info.tableau.nombre_dimension == 2)
+					{
+						for(int i = 0; i < quad->arg2->info.tableau.taille_dimensions[0] * quad->arg2->info.tableau.taille_dimensions[1]; i++)
+						{
+							quad->res->info.tableau.valeurs_flottantes_tableau[i] -= quad->arg1->info.valeur_flottante;
+						}
+					}
+					
+					fprintf(output, "\tla $s0, _%s\n", quad->res->info.nom);
+					fprintf(output, "\tla $s1, _%s\n", quad->arg2->info.nom);
+					
+					if(quad->res->info.tableau.nombre_dimension == 1)
+					{
+						//i = longueur du tableau
+						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0]);
+					}
+					else
+					{
+						//i = longueur du tableau
+						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0] * quad->res->info.tableau.taille_dimensions[1]);
+					}
+
+					fprintf(output, "Loop%d:\n", liste_quad->compteur_label_loop);
+					fprintf(output, "\tl.s $f2, 0($s1)\n");
+					
+					if(quad->arg1->info.type == TYPE_FLOAT)
+					{
+						fprintf(output, "\tli.s $f3 %f\n", quad->arg1->info.valeur_flottante);
+					}
+					else if(quad->arg1->info.type == TYPE_INT) //cast
+					{
+						fprintf(output, "\tli $t1 %d\n", quad->arg1->info.valeur_entiere);
+						fprintf(output, "\tmtc1 $t1 $f0\n");
+						fprintf(output, "\tcvt.s.w $f0 $f0\n");
+						fprintf(output, "\tmov.s $f3 $f0\n");
+					}
+					
+					// constante - tab
+					fprintf(output, "\tsub.s $f2, $f3, $f2\n");  
+
+					fprintf(output, "\ts.s $f2, 0($s0)\n");
+
+					//prochain élément
+					fprintf(output, "\taddi $s0, $s0, 4\n");
+					fprintf(output, "\taddi $s1, $s1, 4\n");
+
+					//i--
+					fprintf(output, "\taddi $t0, $t0, -1\n");
+
+					//Continue the loop if the loop counter is not zero
+					fprintf(output, "\tbnez $t0, Loop%d\n", liste_quad->compteur_label_loop);
+					liste_quad->compteur_label_loop += 1;
+					
+				}
+				else if (quad->arg1->info.sorte == SORTE_TABLEAU && quad->arg1->info.tableau.is_matrix == true && quad->arg2->info.sorte == SORTE_TABLEAU && quad->arg2->info.tableau.is_matrix == true)
+				{
+				
+					//test de validité de l'opération de soustraction => res = arg1 - arg2, les trois matrices doivent être de mêmes tailles
+					if(quad->res->info.tableau.taille_dimensions[0] != quad->arg1->info.tableau.taille_dimensions[0] || quad->res->info.tableau.taille_dimensions[0] != quad->arg2->info.tableau.taille_dimensions[0] || quad->res->info.tableau.taille_dimensions[1] != quad->arg1->info.tableau.taille_dimensions[1] || quad->res->info.tableau.taille_dimensions[1] != quad->arg2->info.tableau.taille_dimensions[1] || quad->arg1->info.tableau.taille_dimensions[0] != quad->arg2->info.tableau.taille_dimensions[0] || quad->arg1->info.tableau.taille_dimensions[1] != quad->arg2->info.tableau.taille_dimensions[1])
+					{
+						fprintf(stderr,"Les trois matrices %s(%d, %d), %s(%d, %d) et %s(%d, %d) ne sont pas de tailles égales : erreur pour une addition!\n", quad->res->info.nom, quad->res->info.tableau.taille_dimensions[0], quad->res->info.tableau.taille_dimensions[1], quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0], quad->arg1->info.tableau.taille_dimensions[1], quad->arg2->info.nom, quad->arg2->info.tableau.taille_dimensions[0], quad->arg2->info.tableau.taille_dimensions[1]); 
+						exit(1);
+					}
+				
+					//cas deux matrices : matrice1 - matrice2
+					
+					fprintf(output, "\tla $s0, _%s\n", quad->res->info.nom);
+					fprintf(output, "\tla $s1, _%s\n", quad->arg1->info.nom);
+					fprintf(output, "\tla $s2, _%s\n", quad->arg2->info.nom);
+					
+					if(quad->res->info.tableau.nombre_dimension == 1)
+					{
+						//i = longueur du tableau
+						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0]);
+					}
+					else
+					{
+						//i = longueur du tableau
+						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0] * quad->res->info.tableau.taille_dimensions[1]);
+					}
+
+					fprintf(output, "Loop%d:\n", liste_quad->compteur_label_loop);
+					fprintf(output, "\tl.s $f2, 0($s1)\n");
+					fprintf(output, "\tl.s $f4, 0($s2)\n");
+					
+					// matrice - matrice
+					fprintf(output, "\tsub.s $f2, $f2, $f4\n");  
+
+					fprintf(output, "\ts.s $f2, 0($s0)\n");
+
+					//prochain élément
+					fprintf(output, "\taddi $s0, $s0, 4\n");
+					fprintf(output, "\taddi $s1, $s1, 4\n");
+					fprintf(output, "\taddi $s2, $s2, 4\n");
+
+					//i--
+					fprintf(output, "\taddi $t0, $t0, -1\n");
+
+					//Continue the loop if the loop counter is not zero
+					fprintf(output, "\tbnez $t0, Loop%d\n", liste_quad->compteur_label_loop);
+					liste_quad->compteur_label_loop += 1;
+					
+				}
+				
 			}
 			break;
 			
@@ -955,12 +1301,12 @@ void affiche_quad_spim(struct Quad* quad)
 				
 				if(quad->res->info.tableau.nombre_dimension == 1)
 				{
-					//longueur du tableau
+					//i = longueur du tableau
 					fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0]);
 				}
 				else
 				{
-					//longueur du tableau 
+					//i = longueur du tableau 
 					fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0] * quad->res->info.tableau.taille_dimensions[1]);
 				}
 
@@ -1020,6 +1366,157 @@ void affiche_quad_spim(struct Quad* quad)
 			else if (quad->res->info.tableau.is_matrix == true)
 			{
 				//TODO
+				if (quad->arg1->info.sorte == SORTE_TABLEAU && quad->arg1->info.tableau.is_matrix == true && quad->arg2->info.sorte == SORTE_CONSTANTE)
+				{
+					if(quad->res->info.tableau.nombre_dimension == 2)
+					{
+						for(int i = 0; i < quad->arg1->info.tableau.taille_dimensions[0] * quad->arg1->info.tableau.taille_dimensions[1]; i++)
+						{
+							//quad->res->info.tableau.valeurs_flottantes_tableau[i] += quad->arg2->info.valeur_flottante; //commenter ?
+						}
+					}
+					
+					fprintf(output, "\tla $s0, _%s\n", quad->res->info.nom);
+					fprintf(output, "\tla $s1, _%s\n", quad->arg1->info.nom);
+					
+					if(quad->res->info.tableau.nombre_dimension == 1)
+					{
+						//i = longueur du tableau
+						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0]);
+					}
+					else
+					{
+						//i = longueur du tableau
+						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0] * quad->res->info.tableau.taille_dimensions[1]);
+					}
+
+					fprintf(output, "Loop%d:\n", liste_quad->compteur_label_loop);
+					fprintf(output, "\tl.s $f2, 0($s1)\n");
+					
+					if(quad->arg2->info.type == TYPE_FLOAT)
+					{
+						fprintf(output, "\tli.s $f3 %f\n", quad->arg2->info.valeur_flottante);
+					}
+					else if(quad->arg2->info.type == TYPE_INT) //cast
+					{
+						fprintf(output, "\tli $t1 %d\n", quad->arg2->info.valeur_entiere);
+						fprintf(output, "\tmtc1 $t1 $f0\n");
+						fprintf(output, "\tcvt.s.w $f0 $f0\n");
+						fprintf(output, "\tmov.s $f3 $f0\n");
+					}
+					
+					// mult par constante
+					fprintf(output, "\tmul.s $f2, $f2, $f3\n");  
+
+					fprintf(output, "\ts.s $f2, 0($s0)\n");
+
+					//prochain élément
+					fprintf(output, "\taddi $s0, $s0, 4\n");
+					fprintf(output, "\taddi $s1, $s1, 4\n");
+
+					//i--
+					fprintf(output, "\taddi $t0, $t0, -1\n");
+
+					//Continue the loop if the loop counter is not zero
+					fprintf(output, "\tbnez $t0, Loop%d\n", liste_quad->compteur_label_loop);
+					liste_quad->compteur_label_loop += 1;
+				}
+				else if (quad->arg2->info.sorte == SORTE_TABLEAU && quad->arg2->info.tableau.is_matrix == true && quad->arg1->info.sorte == SORTE_CONSTANTE)
+				{
+					if(quad->res->info.tableau.nombre_dimension == 2)
+					{
+						for(int i = 0; i < quad->arg2->info.tableau.taille_dimensions[0] * quad->arg2->info.tableau.taille_dimensions[1]; i++)
+						{
+							//quad->res->info.tableau.valeurs_flottantes_tableau[i] += quad->arg1->info.valeur_flottante; //commenter ?
+						}
+					}
+					
+					fprintf(output, "\tla $s0, _%s\n", quad->res->info.nom);
+					fprintf(output, "\tla $s1, _%s\n", quad->arg2->info.nom);
+					
+					if(quad->res->info.tableau.nombre_dimension == 1)
+					{
+						//i = longueur du tableau
+						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0]);
+					}
+					else
+					{
+						//i = longueur du tableau
+						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0] * quad->res->info.tableau.taille_dimensions[1]);
+					}
+
+					fprintf(output, "Loop%d:\n", liste_quad->compteur_label_loop);
+					fprintf(output, "\tl.s $f2, 0($s1)\n");
+					
+					if(quad->arg1->info.type == TYPE_FLOAT)
+					{
+						fprintf(output, "\tli.s $f3 %f\n", quad->arg1->info.valeur_flottante);
+					}
+					else if(quad->arg1->info.type == TYPE_INT) //cast
+					{
+						fprintf(output, "\tli $t1 %d\n", quad->arg1->info.valeur_entiere);
+						fprintf(output, "\tmtc1 $t1 $f0\n");
+						fprintf(output, "\tcvt.s.w $f0 $f0\n");
+						fprintf(output, "\tmov.s $f3 $f0\n");
+					}
+					
+					// mult par constante
+					fprintf(output, "\tmul.s $f2, $f2, $f3\n");  
+
+					fprintf(output, "\ts.s $f2, 0($s0)\n");
+
+					//prochain élément
+					fprintf(output, "\taddi $s0, $s0, 4\n");
+					fprintf(output, "\taddi $s1, $s1, 4\n");
+
+					//i--
+					fprintf(output, "\taddi $t0, $t0, -1\n");
+
+					//Continue the loop if the loop counter is not zero
+					fprintf(output, "\tbnez $t0, Loop%d\n", liste_quad->compteur_label_loop);
+					liste_quad->compteur_label_loop += 1;
+				}
+				else if (quad->arg1->info.sorte == SORTE_TABLEAU && quad->arg1->info.tableau.is_matrix == true && quad->arg2->info.sorte == SORTE_TABLEAU && quad->arg2->info.tableau.is_matrix == true)
+				{
+					//cas deux matrices : matrice1 * matrice2
+					
+					/*fprintf(output, "\tla $s0, _%s\n", quad->res->info.nom);
+					fprintf(output, "\tla $s1, _%s\n", quad->arg1->info.nom);
+					fprintf(output, "\tla $s2, _%s\n", quad->arg2->info.nom);
+					
+					if(quad->res->info.tableau.nombre_dimension == 1)
+					{
+						//longueur du tableau
+						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0]);
+					}
+					else
+					{
+						//longueur du tableau
+						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0] * quad->res->info.tableau.taille_dimensions[1]);
+					}
+
+					fprintf(output, "Loop%d:\n", liste_quad->compteur_label_loop);
+					fprintf(output, "\tl.s $f2, 0($s1)\n");
+					fprintf(output, "\tl.s $f4, 0($s2)\n");
+					
+					// +constante
+					fprintf(output, "\tmul.s $f2, $f2, $f4\n");  
+
+					fprintf(output, "\ts.s $f2, 0($s0)\n");
+
+					//prochain élément
+					fprintf(output, "\taddi $s0, $s0, 4\n");
+					fprintf(output, "\taddi $s1, $s1, 4\n");
+					fprintf(output, "\taddi $s2, $s2, 4\n");
+
+					//i--
+					fprintf(output, "\taddi $t0, $t0, -1\n");
+
+					//Continue the loop if the loop counter is not zero
+					fprintf(output, "\tbnez $t0, Loop%d\n", liste_quad->compteur_label_loop);
+					liste_quad->compteur_label_loop += 1;*/
+					
+				}
 			}
 			break;
 		case QOP_DIV:
@@ -1055,62 +1552,322 @@ void affiche_quad_spim(struct Quad* quad)
 			}
 			else if (quad->res->info.tableau.is_matrix == true)
 			{
-				//TODO
+				if (quad->arg1->info.sorte == SORTE_TABLEAU && quad->arg1->info.tableau.is_matrix == true && quad->arg2->info.sorte == SORTE_CONSTANTE)
+				{
+					if(quad->res->info.tableau.nombre_dimension == 2)
+					{
+						for(int i = 0; i < quad->arg1->info.tableau.taille_dimensions[0] * quad->arg1->info.tableau.taille_dimensions[1]; i++)
+						{
+							quad->res->info.tableau.valeurs_flottantes_tableau[i] -= quad->arg2->info.valeur_flottante;
+						}
+					}
+					
+					fprintf(output, "\tla $s0, _%s\n", quad->res->info.nom);
+					fprintf(output, "\tla $s1, _%s\n", quad->arg1->info.nom);
+					
+					if(quad->res->info.tableau.nombre_dimension == 1)
+					{
+						//i = longueur du tableau
+						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0]);
+					}
+					else
+					{
+						//i = longueur du tableau
+						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0] * quad->res->info.tableau.taille_dimensions[1]);
+					}
+
+					fprintf(output, "Loop%d:\n", liste_quad->compteur_label_loop);
+					fprintf(output, "\tl.s $f2, 0($s1)\n");
+					
+					if(quad->arg2->info.type == TYPE_FLOAT)
+					{
+						fprintf(output, "\tli.s $f3 %f\n", quad->arg2->info.valeur_flottante);
+					}
+					else if(quad->arg2->info.type == TYPE_INT) //cast
+					{
+						fprintf(output, "\tli $t1 %d\n", quad->arg2->info.valeur_entiere);
+						fprintf(output, "\tmtc1 $t1 $f0\n");
+						fprintf(output, "\tcvt.s.w $f0 $f0\n");
+						fprintf(output, "\tmov.s $f3 $f0\n");
+					}
+					
+					// div par constante
+					fprintf(output, "\tdiv.s $f2, $f2, $f3\n");  
+
+					fprintf(output, "\ts.s $f2, 0($s0)\n");
+
+					//prochain élément
+					fprintf(output, "\taddi $s0, $s0, 4\n");
+					fprintf(output, "\taddi $s1, $s1, 4\n");
+
+					//i--
+					fprintf(output, "\taddi $t0, $t0, -1\n");
+
+					//Continue the loop if the loop counter is not zero
+					fprintf(output, "\tbnez $t0, Loop%d\n", liste_quad->compteur_label_loop);
+					liste_quad->compteur_label_loop += 1;
+				}
+				else if (quad->arg2->info.sorte == SORTE_TABLEAU && quad->arg2->info.tableau.is_matrix == true && quad->arg1->info.sorte == SORTE_CONSTANTE)
+				{
+					if(quad->res->info.tableau.nombre_dimension == 2)
+					{
+						for(int i = 0; i < quad->arg2->info.tableau.taille_dimensions[0] * quad->arg2->info.tableau.taille_dimensions[1]; i++)
+						{
+							quad->res->info.tableau.valeurs_flottantes_tableau[i] -= quad->arg1->info.valeur_flottante;
+						}
+					}
+					
+					fprintf(output, "\tla $s0, _%s\n", quad->res->info.nom);
+					fprintf(output, "\tla $s1, _%s\n", quad->arg2->info.nom);
+					
+					if(quad->res->info.tableau.nombre_dimension == 1)
+					{
+						//i = longueur du tableau
+						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0]);
+					}
+					else
+					{
+						//i = longueur du tableau
+						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0] * quad->res->info.tableau.taille_dimensions[1]);
+					}
+
+					fprintf(output, "Loop%d:\n", liste_quad->compteur_label_loop);
+					fprintf(output, "\tl.s $f2, 0($s1)\n");
+					
+					if(quad->arg1->info.type == TYPE_FLOAT)
+					{
+						fprintf(output, "\tli.s $f3 %f\n", quad->arg1->info.valeur_flottante);
+					}
+					else if(quad->arg1->info.type == TYPE_INT) //cast
+					{
+						fprintf(output, "\tli $t1 %d\n", quad->arg1->info.valeur_entiere);
+						fprintf(output, "\tmtc1 $t1 $f0\n");
+						fprintf(output, "\tcvt.s.w $f0 $f0\n");
+						fprintf(output, "\tmov.s $f3 $f0\n");
+					}
+					
+					// constante / tab
+					fprintf(output, "\tdiv.s $f2, $f3, $f2\n");  
+
+					fprintf(output, "\ts.s $f2, 0($s0)\n");
+
+					//prochain élément
+					fprintf(output, "\taddi $s0, $s0, 4\n");
+					fprintf(output, "\taddi $s1, $s1, 4\n");
+
+					//i--
+					fprintf(output, "\taddi $t0, $t0, -1\n");
+
+					//Continue the loop if the loop counter is not zero
+					fprintf(output, "\tbnez $t0, Loop%d\n", liste_quad->compteur_label_loop);
+					liste_quad->compteur_label_loop += 1;
+				}
+				else if (quad->arg1->info.sorte == SORTE_TABLEAU && quad->arg1->info.tableau.is_matrix == true && quad->arg2->info.sorte == SORTE_TABLEAU && quad->arg2->info.tableau.is_matrix == true)
+				{
+					//cas deux matrices : matrice1 * matrice2
+					
+					/*fprintf(output, "\tla $s0, _%s\n", quad->res->info.nom);
+					fprintf(output, "\tla $s1, _%s\n", quad->arg1->info.nom);
+					fprintf(output, "\tla $s2, _%s\n", quad->arg2->info.nom);
+					
+					if(quad->res->info.tableau.nombre_dimension == 1)
+					{
+						//longueur du tableau
+						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0]);
+					}
+					else
+					{
+						//longueur du tableau
+						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0] * quad->res->info.tableau.taille_dimensions[1]);
+					}
+
+					fprintf(output, "Loop%d:\n", liste_quad->compteur_label_loop);
+					fprintf(output, "\tl.s $f2, 0($s1)\n");
+					fprintf(output, "\tl.s $f4, 0($s2)\n");
+					
+					// +constante
+					fprintf(output, "\tdiv.s $f2, $f2, $f4\n");  
+
+					fprintf(output, "\ts.s $f2, 0($s0)\n");
+
+					//prochain élément
+					fprintf(output, "\taddi $s0, $s0, 4\n");
+					fprintf(output, "\taddi $s1, $s1, 4\n");
+					fprintf(output, "\taddi $s2, $s2, 4\n");
+
+					//i--
+					fprintf(output, "\taddi $t0, $t0, -1\n");
+
+					//Continue the loop if the loop counter is not zero
+					fprintf(output, "\tbnez $t0, Loop%d\n", liste_quad->compteur_label_loop);
+					liste_quad->compteur_label_loop += 1;*/
+					
+				}
 			}
 			break;
 		case QOP_ASSIGN:
-		
+
 			if (quad->res->info.type == TYPE_INT) 
 			{
-				if (quad->arg1->info.sorte == SORTE_CONSTANTE) {
-					fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
-					fprintf(output, "\tsw $t0 _%s\n", quad->res->info.nom);
-				} else if (quad->arg1->info.sorte == SORTE_VARIABLE) {
-					fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
-					fprintf(output, "\tsw $t0 _%s\n", quad->res->info.nom);
+				if (quad->arg1->info.sorte == SORTE_CONSTANTE) 
+				{
+					if (quad->arg1->info.type == TYPE_INT)
+					{
+						fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+						fprintf(output, "\tsw $t0 _%s\n", quad->res->info.nom);
+					}
+					else if (quad->arg1->info.type == TYPE_FLOAT) //cast float vers int
+					{
+						fprintf(output, "\tli.s $f0 %f\n", quad->arg1->info.valeur_flottante);
+						fprintf(output, "\tcvt.w.s $f0 $f0\n");
+					}
+				} 
+				else if (quad->arg1->info.sorte == SORTE_VARIABLE) 
+				{
+					if (quad->arg1->info.type == TYPE_INT)
+					{
+						fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+						fprintf(output, "\tsw $t0 _%s\n", quad->res->info.nom);
+					}
+					else if (quad->arg1->info.type == TYPE_FLOAT) //cast float vers int
+					{
+						fprintf(output, "\tl.s $f0 _%s\n", quad->arg1->info.nom);
+						fprintf(output, "\tcvt.w.s $f0 $f0\n");
+						fprintf(output, "\ts.s $f0 _%s\n", quad->res->info.nom);
+					}
 				}
 				else if (quad->arg1->info.sorte == SORTE_TABLEAU) 
 				{
 					int offset = quad->arg2->info.valeur_entiere * 4; //4 = sizeof(int) en MIPS
 					
-					fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
-					fprintf(output, "\tlw $t1 %d($t0)\n", offset);
-					fprintf(output, "\tsw $t1 _%s\n", quad->res->info.nom);
+					if(quad->arg1->info.tableau.nombre_dimension == 1)
+					{
+						if(offset > (quad->arg1->info.tableau.taille_dimensions[0] * 4) - 4)
+						{
+							fprintf(stderr, "Indice [%d] demandé dépasse la taille du tableau %s[%d]\n", quad->arg2->info.valeur_entiere, quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0]);
+							exit(1);
+						}
+					}
+					else if(quad->arg1->info.tableau.nombre_dimension == 2)
+					{
+						if(offset > (quad->arg1->info.tableau.taille_dimensions[0] * quad->arg1->info.tableau.taille_dimensions[1] * 4) - 4)
+						{
+							fprintf(stderr, "Indices demandés dépassent la taille du tableau %s[%d][%d]\n", quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0], quad->arg1->info.tableau.taille_dimensions[1]);
+							exit(1);
+						}
+					}
+					
+					if (quad->arg1->info.type == TYPE_INT)
+					{
+						fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
+						fprintf(output, "\tlw $t1 %d($t0)\n", offset);
+						fprintf(output, "\tsw $t1 _%s\n", quad->res->info.nom);
+					}
+					else if (quad->arg1->info.type == TYPE_FLOAT) //cast float vers int
+					{
+						fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
+						fprintf(output, "\tl.s $f0 %d($t0)\n", offset);
+						fprintf(output, "\tcvt.w.s $f0 $f0\n");
+						fprintf(output, "\ts.s $f0 _%s\n", quad->res->info.nom);
+					}
 				}
 			} 
 			else if (quad->res->info.type == TYPE_FLOAT) 
 			{
-				if (quad->arg1->info.sorte == SORTE_CONSTANTE) {
-					fprintf(output, "\tli.s $f0 %f\n", quad->arg1->info.valeur_flottante);
-					fprintf(output, "\ts.s $f0 _%s\n", quad->res->info.nom);
-				} else if (quad->arg1->info.sorte == SORTE_VARIABLE) {
-					fprintf(output, "\tl.s $f0 _%s\n", quad->arg1->info.nom);
-					fprintf(output, "\ts.s $f0 _%s\n", quad->res->info.nom);
+				if (quad->arg1->info.sorte == SORTE_CONSTANTE) 
+				{
+					if (quad->arg1->info.type == TYPE_INT) //cast int vers float
+					{
+						fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+						fprintf(output, "\tmtc1 $t0 $f0\n");
+						fprintf(output, "\tcvt.s.w $f0 $f0\n");
+						fprintf(output, "\ts.s $f0 _%s\n", quad->res->info.nom);
+						
+					}
+					else if (quad->arg1->info.type == TYPE_FLOAT) 
+					{
+						fprintf(output, "\tli.s $f0 %f\n", quad->arg1->info.valeur_flottante);
+						fprintf(output, "\ts.s $f0 _%s\n", quad->res->info.nom);
+					}
+				} 
+				else if (quad->arg1->info.sorte == SORTE_VARIABLE) 
+				{
+					if (quad->arg1->info.type == TYPE_INT) //cast int vers float
+					{
+						fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+						fprintf(output, "\tmtc1 $t0 $f0\n");
+						fprintf(output, "\tcvt.s.w $f0 $f0\n");
+						fprintf(output, "\ts.s $f0 _%s\n", quad->res->info.nom);
+						
+					}
+					else if (quad->arg1->info.type == TYPE_FLOAT) 
+					{
+						fprintf(output, "\tl.s $f0 _%s\n", quad->arg1->info.nom);
+						fprintf(output, "\ts.s $f0 _%s\n", quad->res->info.nom);
+					}
 				}
 				else if (quad->arg1->info.sorte == SORTE_TABLEAU) 
 				{
 					if(quad->arg2 != NULL) //avec indice 
 					{
+						//fprintf(stderr, "NOM res : %s, indice : %d, expr : %s\n", quad->res->info.nom, quad->arg2->info.valeur_entiere, quad->arg1->info.nom);
+					
 						int offset = quad->arg2->info.valeur_entiere * 4; //4 = sizeof(float) en MIPS
 						
-						fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
-						fprintf(output, "\tl.s $f1 %d($t0)\n", offset);
-						fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+						if(quad->arg1->info.tableau.nombre_dimension == 1)
+						{
+							if(offset > (quad->arg1->info.tableau.taille_dimensions[0] * 4) - 4)
+							{
+								fprintf(stderr, "Indice [%d] demandé dépasse la taille du tableau %s[%d]\n", quad->arg2->info.valeur_entiere, quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0]);
+								exit(1);
+							}
+						}
+						else if(quad->arg1->info.tableau.nombre_dimension == 2)
+						{
+							if(offset > (quad->arg1->info.tableau.taille_dimensions[0] * quad->arg1->info.tableau.taille_dimensions[1] * 4) - 4)
+							{
+								fprintf(stderr, "Indices demandés dépassent la taille du tableau %s[%d][%d]\n", quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0], quad->arg1->info.tableau.taille_dimensions[1]);
+								exit(1);
+							}
+						}
+						
+						if (quad->arg1->info.type == TYPE_INT) //cast int vers float
+						{
+							fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
+							fprintf(output, "\tlw $t1 %d($t0)\n", offset);
+							fprintf(output, "\tmtc1 $t1 $f0\n");
+							fprintf(output, "\tcvt.s.w $f0 $f0\n");
+							fprintf(output, "\ts.s $f0 _%s\n", quad->res->info.nom);
+							
+						}
+						else if (quad->arg1->info.type == TYPE_FLOAT) 
+						{
+							fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
+							fprintf(output, "\tl.s $f1 %d($t0)\n", offset);
+							fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+						}
 					}
 					else //sans indice => matrice assignation (ex : IA = ~A)
 					{
+						//test de validité de l'opération de transposition => arg1 est la matrice de transposition calculée, res est la matrice à gauche de l'assignation : les deux matrices doivent avoir la même taille pour que la transposition fonctionne
+						if(quad->res->info.tableau.taille_dimensions[0] != quad->arg1->info.tableau.taille_dimensions[0] || quad->res->info.tableau.taille_dimensions[1] != quad->arg1->info.tableau.taille_dimensions[1])
+						{
+							fprintf(stderr,"Les deux matrices %s(%d, %d) et %s(%d, %d) ne sont pas de tailles égales : erreur pour une transposition!\n", quad->res->info.nom, quad->res->info.tableau.taille_dimensions[0], quad->res->info.tableau.taille_dimensions[1], quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0], quad->arg1->info.tableau.taille_dimensions[1]); 
+							exit(1);
+						}
+					
 						//copier le tableau arg1 dans res
 						fprintf(output, "\tla $s0, _%s\n", quad->arg1->info.nom);
 						fprintf(output, "\tla $s1, _%s\n", quad->res->info.nom);
 						
 						if(quad->res->info.tableau.nombre_dimension == 1)
 						{
-							//longueur du tableau  
+							//i = longueur du tableau  
 							fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0]);
 						}
 						else
 						{
-							//longueur du tableau  
+							//i = longueur du tableau  
 							fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0] * quad->res->info.tableau.taille_dimensions[1]);
 						}
 
@@ -1281,7 +2038,7 @@ void affiche_quad_spim(struct Quad* quad)
 				fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
 			}
 			else if (quad->arg1->info.sorte == SORTE_TABLEAU && quad->arg1->info.tableau.is_matrix == true)
-			{
+			{			
 				if(quad->res->info.tableau.nombre_dimension == 1)
 				{
 					memcpy(quad->res->info.tableau.valeurs_flottantes_tableau, quad->arg1->info.tableau.valeurs_flottantes_tableau, quad->arg1->info.tableau.taille_dimensions[0] * sizeof(float));
@@ -1495,6 +2252,8 @@ void affiche_quad_spim(struct Quad* quad)
 			fprintf(output, "\tmtc1 $t0 $f0\n");
 			fprintf(output, "\tcvt.s.w $f0 $f0\n");
 			fprintf(output, "\ts.s $f0 _%s\n", quad->res->info.nom);
+			quad->res->info.valeur_flottante = (float)quad->arg1->info.valeur_entiere;
+			break;
 			
 		default:
 			break;
