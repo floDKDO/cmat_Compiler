@@ -530,6 +530,12 @@ void affiche_quad_spim(struct Quad* quad)
 			
 		case QOP_PRINTMAT:
 		
+			if(quad->res->info.tableau.is_matrix == false)
+			{
+				fprintf(stderr, "Tentative d'utilissation de printmat sur un tableau qui n'est pas une matrice !\n");
+				exit(1);
+			}
+		
 			if(quad->res->info.tableau.nombre_dimension == 1)
 			{
 				fprintf(output, "\tli $t1, %d\n", quad->res->info.tableau.taille_dimensions[0]); //borne sup boucle = nombre d'éléments dans le tableau 1D
@@ -1738,37 +1744,49 @@ void affiche_quad_spim(struct Quad* quad)
 				}
 				else if (quad->arg1->info.sorte == SORTE_TABLEAU) 
 				{
-					int offset = quad->arg2->info.valeur_entiere * 4; //4 = sizeof(int) en MIPS
-					
-					if(quad->arg1->info.tableau.nombre_dimension == 1)
+					if(quad->arg2 != NULL)
 					{
-						if(offset > (quad->arg1->info.tableau.taille_dimensions[0] * 4) - 4)
+						int offset = quad->arg2->info.valeur_entiere * 4; //4 = sizeof(int) en MIPS
+						
+						if(quad->arg1->info.tableau.nombre_dimension == 1)
 						{
-							fprintf(stderr, "Indice [%d] demandé dépasse la taille du tableau %s[%d]\n", quad->arg2->info.valeur_entiere, quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0]);
-							exit(1);
+							if(offset > (quad->arg1->info.tableau.taille_dimensions[0] * 4) - 4)
+							{
+								fprintf(stderr, "Indice [%d] demandé dépasse la taille du tableau %s[%d]\n", quad->arg2->info.valeur_entiere, quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0]);
+								exit(1);
+							}
+						}
+						else if(quad->arg1->info.tableau.nombre_dimension == 2)
+						{
+							if(offset > (quad->arg1->info.tableau.taille_dimensions[0] * quad->arg1->info.tableau.taille_dimensions[1] * 4) - 4)
+							{
+								fprintf(stderr, "Indices demandés dépassent la taille du tableau %s[%d][%d]\n", quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0], quad->arg1->info.tableau.taille_dimensions[1]);
+								exit(1);
+							}
+						}
+						
+						if (quad->arg1->info.type == TYPE_INT)
+						{
+							fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
+							fprintf(output, "\tlw $t1 %d($t0)\n", offset);
+							fprintf(output, "\tsw $t1 _%s\n", quad->res->info.nom);
+						}
+						else if (quad->arg1->info.type == TYPE_FLOAT) //cast float vers int
+						{
+							fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
+							fprintf(output, "\tl.s $f0 %d($t0)\n", offset);
+							fprintf(output, "\tcvt.w.s $f0 $f0\n");
+							fprintf(output, "\ts.s $f0 _%s\n", quad->res->info.nom);
 						}
 					}
-					else if(quad->arg1->info.tableau.nombre_dimension == 2)
+					else
 					{
-						if(offset > (quad->arg1->info.tableau.taille_dimensions[0] * quad->arg1->info.tableau.taille_dimensions[1] * 4) - 4)
+						//si le tableau n'est pas une matrice, assignation interdite !
+						if(quad->arg1->info.tableau.is_matrix == false && quad->arg1->info.sorte == SORTE_TABLEAU)
 						{
-							fprintf(stderr, "Indices demandés dépassent la taille du tableau %s[%d][%d]\n", quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0], quad->arg1->info.tableau.taille_dimensions[1]);
+							fprintf(stderr, "Tentative d'assignation d'un tableau qui n'est pas une matrice !\n");
 							exit(1);
 						}
-					}
-					
-					if (quad->arg1->info.type == TYPE_INT)
-					{
-						fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
-						fprintf(output, "\tlw $t1 %d($t0)\n", offset);
-						fprintf(output, "\tsw $t1 _%s\n", quad->res->info.nom);
-					}
-					else if (quad->arg1->info.type == TYPE_FLOAT) //cast float vers int
-					{
-						fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
-						fprintf(output, "\tl.s $f0 %d($t0)\n", offset);
-						fprintf(output, "\tcvt.w.s $f0 $f0\n");
-						fprintf(output, "\ts.s $f0 _%s\n", quad->res->info.nom);
 					}
 				}
 			} 
@@ -1849,6 +1867,14 @@ void affiche_quad_spim(struct Quad* quad)
 					}
 					else //sans indice => matrice assignation (ex : IA = ~A)
 					{
+					
+						//si le tableau n'est pas une matrice, assignation interdite !
+						if(quad->arg1->info.tableau.is_matrix == false && quad->arg1->info.sorte == SORTE_TABLEAU)
+						{
+							fprintf(stderr, "Tentative d'assignation d'un tableau qui n'est pas une matrice !\n");
+							exit(1);
+						}
+					
 						//test de validité de l'opération de transposition => arg1 est la matrice de transposition calculée, res est la matrice à gauche de l'assignation : les deux matrices doivent avoir la même taille pour que la transposition fonctionne
 						if(quad->res->info.tableau.taille_dimensions[0] != quad->arg1->info.tableau.taille_dimensions[0] || quad->res->info.tableau.taille_dimensions[1] != quad->arg1->info.tableau.taille_dimensions[1])
 						{

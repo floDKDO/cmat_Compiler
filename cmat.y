@@ -277,7 +277,7 @@ variable_declaree :
 		}
         	
         	if($3.ptr->info.sorte == SORTE_TABLEAU)
-        	{		
+        	{	
         		struct noeud* indice;
         		if($3.ptr->info.tableau.nombre_dimension == 1)
         		{
@@ -440,11 +440,7 @@ appel_fonction :
 	}
 	| PRINTMAT '(' IDENT ')' {
 	struct noeud* entree = get_symbole(tds, $3);
-	
-	if(entree->info.tableau.is_matrix == true)
-        {
-		gencode(liste_quad, QOP_PRINTMAT, NULL, NULL, entree);
-	}
+	gencode(liste_quad, QOP_PRINTMAT, NULL, NULL, entree);
 	$$.ptr = entree;
 }
 ;
