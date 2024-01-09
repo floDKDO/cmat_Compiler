@@ -601,6 +601,7 @@ void affiche_quad_spim(struct Quad* quad)
 				//if(i % quad->res->info.tableau.taille_dimensions[1] == quad->res->info.tableau.taille_dimensions[1] - 1)
 				//=> \n
 				//else => \t
+				
 				fprintf(output, "\tbeq $t4 $t6 Else%d\n", liste_quad->compteur_label_else);
 				fprintf(output, "\n\tli $v0 4\n\tla $a0 tabulation\n\tsyscall\n"); //on ajoute un \t après un élément
 				fprintf(output, "\tj Endif%d\n", liste_quad->compteur_label_endif);
@@ -713,7 +714,7 @@ void affiche_quad_spim(struct Quad* quad)
 				{
 					for(int i = 0; i < quad->arg1->info.tableau.taille_dimensions[0] * quad->arg1->info.tableau.taille_dimensions[1]; i++)
 					{
-						quad->res->info.tableau.valeurs_flottantes_tableau[i] += 1;
+						quad->res->info.tableau.valeurs_flottantes_tableau[i] -= 1;
 					}
 				}
 				
@@ -837,7 +838,7 @@ void affiche_quad_spim(struct Quad* quad)
 				{
 					for(int i = 0; i < quad->arg1->info.tableau.taille_dimensions[0] * quad->arg1->info.tableau.taille_dimensions[1]; i++)
 					{
-						quad->res->info.tableau.valeurs_flottantes_tableau[i] += 1;
+						quad->res->info.tableau.valeurs_flottantes_tableau[i] -= 1;
 					}
 				}
 				
@@ -1371,14 +1372,13 @@ void affiche_quad_spim(struct Quad* quad)
 			}
 			else if (quad->res->info.tableau.is_matrix == true)
 			{
-				//TODO
 				if (quad->arg1->info.sorte == SORTE_TABLEAU && quad->arg1->info.tableau.is_matrix == true && quad->arg2->info.sorte == SORTE_CONSTANTE)
 				{
 					if(quad->res->info.tableau.nombre_dimension == 2)
 					{
 						for(int i = 0; i < quad->arg1->info.tableau.taille_dimensions[0] * quad->arg1->info.tableau.taille_dimensions[1]; i++)
 						{
-							//quad->res->info.tableau.valeurs_flottantes_tableau[i] += quad->arg2->info.valeur_flottante; //commenter ?
+							quad->res->info.tableau.valeurs_flottantes_tableau[i] += quad->arg2->info.valeur_flottante; //commenter ?
 						}
 					}
 					
@@ -1433,7 +1433,7 @@ void affiche_quad_spim(struct Quad* quad)
 					{
 						for(int i = 0; i < quad->arg2->info.tableau.taille_dimensions[0] * quad->arg2->info.tableau.taille_dimensions[1]; i++)
 						{
-							//quad->res->info.tableau.valeurs_flottantes_tableau[i] += quad->arg1->info.valeur_flottante; //commenter ?
+							quad->res->info.tableau.valeurs_flottantes_tableau[i] += quad->arg1->info.valeur_flottante; //commenter ?
 						}
 					}
 					
@@ -1869,53 +1869,62 @@ void affiche_quad_spim(struct Quad* quad)
 					{
 					
 						//si le tableau n'est pas une matrice, assignation interdite !
-						if(quad->arg1->info.tableau.is_matrix == false && quad->arg1->info.sorte == SORTE_TABLEAU)
+						if(quad->arg1->info.tableau.is_matrix == false && quad->res->info.sorte == SORTE_TABLEAU)
 						{
 							fprintf(stderr, "Tentative d'assignation d'un tableau qui n'est pas une matrice !\n");
 							exit(1);
 						}
-					
-						//test de validité de l'opération de transposition => arg1 est la matrice de transposition calculée, res est la matrice à gauche de l'assignation : les deux matrices doivent avoir la même taille pour que la transposition fonctionne
-						if(quad->res->info.tableau.taille_dimensions[0] != quad->arg1->info.tableau.taille_dimensions[0] || quad->res->info.tableau.taille_dimensions[1] != quad->arg1->info.tableau.taille_dimensions[1])
-						{
-							fprintf(stderr,"Les deux matrices %s(%d, %d) et %s(%d, %d) ne sont pas de tailles égales : erreur pour une transposition!\n", quad->res->info.nom, quad->res->info.tableau.taille_dimensions[0], quad->res->info.tableau.taille_dimensions[1], quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0], quad->arg1->info.tableau.taille_dimensions[1]); 
-							exit(1);
-						}
-					
-						//copier le tableau arg1 dans res
-						fprintf(output, "\tla $s0, _%s\n", quad->arg1->info.nom);
-						fprintf(output, "\tla $s1, _%s\n", quad->res->info.nom);
 						
-						if(quad->res->info.tableau.nombre_dimension == 1)
+						if(quad->res->info.sorte == SORTE_TABLEAU)
 						{
-							//i = longueur du tableau  
-							fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0]);
+					
+							//test de validité de l'opération de transposition => arg1 est la matrice de transposition calculée, res est la matrice à gauche de l'assignation : les deux matrices doivent avoir la même taille pour que la transposition fonctionne
+							if(quad->res->info.tableau.taille_dimensions[0] != quad->arg1->info.tableau.taille_dimensions[0] || quad->res->info.tableau.taille_dimensions[1] != quad->arg1->info.tableau.taille_dimensions[1])
+							{
+								fprintf(stderr,"Les deux matrices %s(%d, %d) et %s(%d, %d) ne sont pas de tailles égales : erreur pour une transposition!\n", quad->res->info.nom, quad->res->info.tableau.taille_dimensions[0], quad->res->info.tableau.taille_dimensions[1], quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0], quad->arg1->info.tableau.taille_dimensions[1]); 
+								exit(1);
+							}
+						
+							//copier le tableau arg1 dans res
+							fprintf(output, "\tla $s0, _%s\n", quad->arg1->info.nom);
+							fprintf(output, "\tla $s1, _%s\n", quad->res->info.nom);
+							
+							if(quad->res->info.tableau.nombre_dimension == 1)
+							{
+								//i = longueur du tableau  
+								fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0]);
+							}
+							else
+							{
+								//i = longueur du tableau  
+								fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0] * quad->res->info.tableau.taille_dimensions[1]);
+							}
+
+							//Loop to copy elements from sourceArray to destinationArray
+							fprintf(output, "Loop%d:\n", liste_quad->compteur_label_loop);
+							
+							//Load an element from sourceArray into $t1
+							fprintf(output, "\tlw $t1, 0($s0)\n");
+
+							//Store the element into destinationArray
+							fprintf(output, "\tsw $t1, 0($s1)\n");
+
+							//Prochain élément
+							fprintf(output, "\taddi $s0, $s0, 4\n"); 
+							fprintf(output, "\taddi $s1, $s1, 4\n");  
+
+							//i--
+							fprintf(output, "\taddi $t0, $t0, -1\n");
+
+							//Continue the loop if the loop counter is not zero
+							fprintf(output, "\tbnez $t0, Loop%d\n", liste_quad->compteur_label_loop);
+							liste_quad->compteur_label_loop += 1;
 						}
 						else
 						{
-							//i = longueur du tableau  
-							fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0] * quad->res->info.tableau.taille_dimensions[1]);
+							fprintf(stderr, "Tentative d'assignation d'un tableau/matrice à une variable !\n");
+							exit(1);
 						}
-
-						//Loop to copy elements from sourceArray to destinationArray
-						fprintf(output, "Loop%d:\n", liste_quad->compteur_label_loop);
-						
-						//Load an element from sourceArray into $t1
-						fprintf(output, "\tlw $t1, 0($s0)\n");
-
-						//Store the element into destinationArray
-						fprintf(output, "\tsw $t1, 0($s1)\n");
-
-						//Prochain élément
-						fprintf(output, "\taddi $s0, $s0, 4\n"); 
-						fprintf(output, "\taddi $s1, $s1, 4\n");  
-
-						//i--
-						fprintf(output, "\taddi $t0, $t0, -1\n");
-
-						//Continue the loop if the loop counter is not zero
-						fprintf(output, "\tbnez $t0, Loop%d\n", liste_quad->compteur_label_loop);
-						liste_quad->compteur_label_loop += 1;
 					}
 				}
 			}

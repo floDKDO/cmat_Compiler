@@ -478,8 +478,8 @@ expression : valeur
         {
                 $$.ptr = newtemp (&tds, TYPE_ERROR);
         }
-        else if (($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.tableau.is_matrix == false)
-                 || ($3.ptr->info.sorte == SORTE_TABLEAU && $3.ptr->info.tableau.is_matrix == false))
+        else if (($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.tableau.is_matrix == false && ($1.indice_demande[0] == -1 && $1.indice_demande[1] == -1))
+                 || ($3.ptr->info.sorte == SORTE_TABLEAU && $3.ptr->info.tableau.is_matrix == false && ($3.indice_demande[0] == -1 && $3.indice_demande[1] == -1)))
         {
                 yyerror ("+ avec des tableaux");
                 $$.ptr = newtemp (&tds, TYPE_ERROR);
@@ -531,8 +531,8 @@ expression : valeur
         {
                 $$.ptr = newtemp (&tds, TYPE_ERROR);
         }
-        else if (($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.tableau.is_matrix == false)
-                 || ($3.ptr->info.sorte == SORTE_TABLEAU && $3.ptr->info.tableau.is_matrix == false))
+        else if (($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.tableau.is_matrix == false && ($1.indice_demande[0] == -1 && $1.indice_demande[1] == -1))
+                 || ($3.ptr->info.sorte == SORTE_TABLEAU && $3.ptr->info.tableau.is_matrix == false && ($3.indice_demande[0] == -1 && $3.indice_demande[1] == -1)))
         {
                 yyerror ("- avec des tableaux");
                 $$.ptr = newtemp (&tds, TYPE_ERROR);
@@ -584,8 +584,8 @@ expression : valeur
         {
                 $$.ptr = newtemp (&tds, TYPE_ERROR);
         }
-        else if (($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.tableau.is_matrix == false)
-                 || ($3.ptr->info.sorte == SORTE_TABLEAU && $3.ptr->info.tableau.is_matrix == false))
+        else if (($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.tableau.is_matrix == false && ($1.indice_demande[0] == -1 && $1.indice_demande[1] == -1))
+                 || ($3.ptr->info.sorte == SORTE_TABLEAU && $3.ptr->info.tableau.is_matrix == false && ($3.indice_demande[0] == -1 && $3.indice_demande[1] == -1)))
         {
                 yyerror ("* avec des tableaux");
                 $$.ptr = newtemp (&tds, TYPE_ERROR);
@@ -637,8 +637,8 @@ expression : valeur
         {
                 $$.ptr = newtemp (&tds, TYPE_ERROR);
         }
-        else if (($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.tableau.is_matrix == false)
-                 || ($3.ptr->info.sorte == SORTE_TABLEAU && $3.ptr->info.tableau.is_matrix == false))
+        else if (($1.ptr->info.sorte == SORTE_TABLEAU && $1.ptr->info.tableau.is_matrix == false && ($1.indice_demande[0] == -1 && $1.indice_demande[1] == -1))
+                 || ($3.ptr->info.sorte == SORTE_TABLEAU && $3.ptr->info.tableau.is_matrix == false && ($3.indice_demande[0] == -1 && $3.indice_demande[1] == -1)))
         {
                 yyerror ("/ avec des tableaux");
                 $$.ptr = newtemp (&tds, TYPE_ERROR);
@@ -1243,6 +1243,7 @@ type : INT {$$ = TYPE_INT;} | FLOAT {$$ = TYPE_FLOAT;} | MATRIX {$$ = TYPE_MATRI
 valeur : 
 	IDENT {
 			struct noeud* entree = get_symbole(tds, $1); 
+			
 			if(entree == NULL) {
 				char err_msg[MAX_LENGTH_VAR_NAME + 20];
 				sprintf(err_msg, "Undeclared name : '%s'", $1);
@@ -1250,14 +1251,20 @@ valeur :
 				entree = insertion(&tds, $1, SORTE_NONE, TYPE_ERROR);
 			}
 			$$.ptr = entree;
+			$$.indice_demande[0] = -1; 
+			$$.indice_demande[1] = -1;
 		}	
 	| constante_entiere {
         	struct noeud* entree = get_symbole_constante_int(tds, $1);
 		    $$.ptr = entree;
+		    $$.indice_demande[0] = -1; 
+			$$.indice_demande[1] = -1;
 		}
 	| constante_flottante {
 			struct noeud* entree = get_symbole_constante(tds, $1);	
 			$$.ptr = entree;
+			$$.indice_demande[0] = -1; 
+			$$.indice_demande[1] = -1;
 		}
     | IDENT intervalle_dimension {
     			struct noeud* entree = get_symbole(tds, $1); //tableau récupéré
@@ -1277,7 +1284,35 @@ valeur :
 				$$.indice_demande[0] = $2.taillesDim[0]; 
 				$$.indice_demande[1] = $2.taillesDim[1]; 
 			}
-			$$.ptr = entree;}
+
+
+			if(entree->info.type == TYPE_INT)
+			{
+				$$.ptr = newtemp (&tds, TYPE_INT);
+				
+			}
+			else if(entree->info.type == TYPE_FLOAT)
+			{
+				$$.ptr = newtemp (&tds, TYPE_FLOAT);	
+			}
+			
+			struct noeud* indice;
+        		if(entree->info.tableau.nombre_dimension == 1)
+        		{
+				indice = get_symbole_constante_int(tds, $$.indice_demande[0]);
+			}
+			else if(entree->info.tableau.nombre_dimension == 2)
+        		{
+        			//tableau 2D => récupérer la bonne case
+        			int indice_dim_un = $$.indice_demande[0];
+        			int indice_dim_deux = $$.indice_demande[1];
+        			
+        			//pour obtenir le bon indice (valeurs rangées en ROW ORDER)
+        			int vrai_indice = indice_dim_un * entree->info.tableau.taille_dimensions[1] + indice_dim_deux;
+        			indice = insertion_constante(&tds, TYPE_INT, vrai_indice); //on ajoute le vrai indice à la table des symboles
+        		}
+        		gencode(liste_quad, QOP_ASSIGN, entree, indice, $$.ptr); //la case de tableau demandée se trouve dans la valeur_entiere de indice
+			}
     | incr_et_decr {
 			struct noeud* entree = get_symbole(tds, $1.ptr->info.nom); 
 		    if(entree == NULL) {
@@ -1286,6 +1321,8 @@ valeur :
 				yyerror(err_msg);
 				entree = insertion(&tds, $1.ptr->info.nom, SORTE_NONE, TYPE_ERROR);
 			}
+			$$.indice_demande[0] = -1; 
+			$$.indice_demande[1] = -1;
 			$$.ptr = entree;
 		}
     | appel_fonction {} 

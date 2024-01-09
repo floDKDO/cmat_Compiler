@@ -54,28 +54,41 @@ int main()
 		test = test - 1;
 	}
 	
-	//matrix tab[10] = {1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5};
+	//float tab[10] = {1.5, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5, 10.5};
+	
+	/*matrix testeur[10];
+	testeur = tab;
+	printmat(testeur);*/
 	
 	int tableau[4][3] = {{1, 2, 3},{5, 6, 7},{8, 9, 0},{4, 7, 9}};
-	int kas = tableau[0][1];
-	print(tableau[0][1]);
+	float kas = tableau[0][0] + tableau[0][2] / tableau[0][1] * tableau[3][2];
+	print(kas);
 	
 	matrix tab[4][3] = {{1.1, 2.1, 3.1},{5.1, 6.1, 7.1},{8.1, 9.1, 0.1},{8.2, 9.2, 0.2}};
 	
-	//matrix transpose_tab[10];
+	matrix transpose_tab[3][4];
 	
-	tab = --tab;
+	//tab = --tab;
+	transpose_tab = ~tab;
 	
 	printmat(tab);
-	//printmat(transpose_tab);
+	printmat(transpose_tab);
 	
-	/*tab = tab*2;
+	tab = 2* tab;
+	printmat(tab);
+	tab = tab * 3;
+	printmat(tab);
+	tab = tab/4;
+	printmat(tab);
 	
-	print(tab[1+1][1+1]);
+	tab = 1 - tab;
+	
+	
+	printmat(tab);
 	
 	//int tab[2] = {1, 2};
 	
-	for(int k = 0; k < 4; k++)
+	/*for(int k = 0; k < 4; k++)
 	{
 		print(k);
 	}
