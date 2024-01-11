@@ -89,7 +89,7 @@ int action_incr_et_decr = 0; //0 ou 1 ou 2 ou 3 selon l'action de incr et decr p
 %left UNARY INTERV_OP
 %right INCR DECR
 
-%type <exprval> expression incr_et_decr valeur appel_fonction operation
+%type <exprval> expression incr_et_decr valeur appel_fonction operation iterateur_boucle_for
 %type <type> type;
 
 %start programme
@@ -111,7 +111,7 @@ liste_instruction : liste_instruction instruction
 ;
 
 instruction : declaration_variable ';' 
-	    | declaration_fonction
+	    | declaration_fonction {}
 	    | liste_operation ';'
         | condition
         | boucle
@@ -137,37 +137,30 @@ boucle_for : FOR '(' initial_declaration ';' liste_operation ';' liste_operation
 initial_declaration : declaration_variable | liste_operation
 ;*/
 
+iterateur_boucle_for: type IDENT {struct noeud* entree = insertion(&tds, $2, SORTE_VARIABLE, $1); $$.ptr = entree;}
+		    | IDENT {struct noeud* entree = get_symbole(tds, $1); $$.ptr = entree;}
+
 // Boucle for moins poussée
-boucle_for : FOR '(' type IDENT {struct noeud* entree = get_symbole(tds, $4); 
-			if(entree == NULL) {
-				entree = insertion(&tds, $4, SORTE_VARIABLE, $3); $<exprval>$.ptr = entree; /* $$ = noeud entrée */
-				$<exprval>$.ptr = entree; /* $$ = noeud entrée */
-			}
-			else 
-			{
-				fprintf(stderr,"Previous declaration of %s exists\n", $4); 
-               	 	exit(1);
-               	}
-} 
-'=' expression {struct noeud* entree = get_symbole(tds, $7.ptr->info.nom); gencode(liste_quad, QOP_FOR, entree, NULL, $<exprval>5.ptr); /*$<exprval>$.ptr = entree;*/}
-';' expression {gencode(liste_quad, QOP_HALF_FOR, NULL, NULL, $10.ptr);} ';' {execute_action_incr_et_decr = false;} incr_et_decr {execute_action_incr_et_decr = true;} 
+boucle_for : FOR '(' iterateur_boucle_for
+'=' expression {struct noeud* entree = get_symbole(tds, $5.ptr->info.nom); gencode(liste_quad, QOP_FOR, entree, NULL, $<exprval>3.ptr); /*$<exprval>$.ptr = entree;*/}
+';' expression {gencode(liste_quad, QOP_HALF_FOR, NULL, NULL, $8.ptr);} ';' {execute_action_incr_et_decr = false;} incr_et_decr {execute_action_incr_et_decr = true;} 
 ')' corps{
 	//il faut effectuer l'incrémentation/décrémentation maintenant
 	if(action_incr_et_decr == 0) 
 	{
-		gencode(liste_quad, QOP_POST_INCR, $14.ptr, NULL, $14.ptr);
+		gencode(liste_quad, QOP_POST_INCR, $12.ptr, NULL, $12.ptr);
 	}
 	else if(action_incr_et_decr == 1) 
 	{
-		gencode(liste_quad, QOP_POST_DECR, $14.ptr, NULL, $14.ptr);
+		gencode(liste_quad, QOP_POST_DECR, $12.ptr, NULL, $12.ptr);
 	}
 	else if(action_incr_et_decr == 2) 
 	{
-		gencode(liste_quad, QOP_PRE_INCR, $14.ptr, NULL, $14.ptr);
+		gencode(liste_quad, QOP_PRE_INCR, $12.ptr, NULL, $12.ptr);
 	}
 	else if(action_incr_et_decr == 3) 
 	{
-		gencode(liste_quad, QOP_PRE_DECR, $14.ptr, NULL, $14.ptr);
+		gencode(liste_quad, QOP_PRE_DECR, $12.ptr, NULL, $12.ptr);
 	}
 	gencode(liste_quad, QOP_END_FOR, NULL, NULL, NULL);
 }
@@ -266,7 +259,7 @@ variable_declaree :
 		} 
 		
 		/*strcpy($$, $1);*/}
-	| IDENT '=' expression {
+	| IDENT assign expression {
     
 		struct noeud* entree = insertion(&tds, $1, SORTE_VARIABLE, TYPE_NONE);
 		
@@ -275,7 +268,7 @@ variable_declaree :
 			fprintf(stderr,"Previous declaration of %s exists\n", $1); 
 			exit(1);
 		}
-        	
+		
         	if($3.ptr->info.sorte == SORTE_TABLEAU)
         	{	
         		struct noeud* indice;
@@ -293,11 +286,12 @@ variable_declaree :
         			int vrai_indice = indice_dim_un * $3.ptr->info.tableau.taille_dimensions[1] + indice_dim_deux;
         			indice = insertion_constante(&tds, TYPE_INT, vrai_indice); //on ajoute le vrai indice à la table des symboles
         		}
-        		gencode(liste_quad, QOP_ASSIGN, $3.ptr, indice, entree); //la case de tableau demandée se trouve dans la valeur_entiere de indice
+        		
+        		gencode(liste_quad, $2, $3.ptr, indice, entree); //la case de tableau demandée se trouve dans la valeur_entiere de indice
         	}
         	else
         	{
-			gencode(liste_quad, QOP_ASSIGN, $3.ptr, NULL, entree);
+			gencode(liste_quad, $2, $3.ptr, NULL, entree);
 		}
 		//strcpy($$, $1);
 	}
@@ -377,23 +371,19 @@ liste_operation :
 
 operation : expression {$$.ptr = $1.ptr;}
 	| IDENT assign operation {struct noeud* entree = get_symbole(tds, $1);
-	
-				  //TODO : switch case pour les différents types de QOP_ASSIGN
-	
-				  gencode(liste_quad, QOP_ASSIGN, $3.ptr, NULL, entree);
-				  
+				  gencode(liste_quad, $2, $3.ptr, NULL, entree);
 				  $$.ptr = entree;} 
 	| IDENT intervalle_dimension assign operation {}
 ;
 
 declaration_fonction : 
-	type IDENT '(' liste_parametre ')' corps
-    | type IDENT '(' ')' corps
+	type IDENT '(' liste_parametre ')' corps {}
+    | type IDENT '(' ')' corps {}
 ;
 		 
 appel_fonction : 
-	IDENT '(' liste_argument ')' {}
-        | IDENT '(' ')' {}
+	IDENT '(' liste_argument ')' {fprintf(stderr, "Fonctions non gérées!\n"); exit(1);}
+        | IDENT '(' ')' {fprintf(stderr, "Fonctions non gérées!\n"); exit(1);}
 	| PRINTF '(' constante_caractere ')' {
 				struct noeud* entree = get_symbole_constante_str(tds, $3);
 				gencode(liste_quad, QOP_PRINTF, NULL, NULL, entree);
@@ -684,78 +674,6 @@ expression : valeur
                 $$.ptr = newtemp (&tds, TYPE_NONE);
         }
 }
-| expression '%' expression
-{
-        if ($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR)
-        {
-                $$.ptr = newtemp (&tds, TYPE_ERROR);
-        }
-        else if ($1.ptr->info.type != TYPE_INT || $1.ptr->info.sorte == SORTE_TABLEAU || $3.ptr->info.type != TYPE_INT
-                 || $3.ptr->info.sorte == SORTE_TABLEAU)
-        {
-                yyerror ("\% avec des non entiers");
-                $$.ptr = newtemp (&tds, TYPE_ERROR);
-        }
-        else
-        {
-                $$.ptr = newtemp (&tds, TYPE_INT);
-                gencode (liste_quad, QOP_MOD, $1.ptr, $3.ptr, $$.ptr);
-        }
-}
-| expression '^' expression
-{
-        if ($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR)
-        {
-                $$.ptr = newtemp (&tds, TYPE_ERROR);
-        }
-        else if ($1.ptr->info.type != TYPE_INT || $1.ptr->info.sorte == SORTE_TABLEAU || $3.ptr->info.type != TYPE_INT
-                 || $3.ptr->info.sorte == SORTE_TABLEAU)
-        {
-                yyerror ("^ avec des non entiers");
-                $$.ptr = newtemp (&tds, TYPE_ERROR);
-        }
-        else
-        {
-                $$.ptr = newtemp (&tds, TYPE_INT);
-                gencode (liste_quad, QOP_XOR, $1.ptr, $3.ptr, $$.ptr);
-        }
-}
-| expression '&' expression
-{
-        if ($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR)
-        {
-                $$.ptr = newtemp (&tds, TYPE_ERROR);
-        }
-        else if ($1.ptr->info.type != TYPE_INT || $1.ptr->info.sorte == SORTE_TABLEAU || $3.ptr->info.type != TYPE_INT
-                 || $3.ptr->info.sorte == SORTE_TABLEAU)
-        {
-                yyerror ("& avec des non entiers");
-                $$.ptr = newtemp (&tds, TYPE_ERROR);
-        }
-        else
-        {
-                $$.ptr = newtemp (&tds, TYPE_INT);
-                gencode (liste_quad, QOP_AND, $1.ptr, $3.ptr, $$.ptr);
-        }
-}
-| expression '|' expression
-{
-        if ($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR)
-        {
-                $$.ptr = newtemp (&tds, TYPE_ERROR);
-        }
-        else if ($1.ptr->info.type != TYPE_INT || $1.ptr->info.sorte == SORTE_TABLEAU || $3.ptr->info.type != TYPE_INT
-                 || $3.ptr->info.sorte == SORTE_TABLEAU)
-        {
-                yyerror ("| avec des non entiers");
-                $$.ptr = newtemp (&tds, TYPE_ERROR);
-        }
-        else
-        {
-                $$.ptr = newtemp (&tds, TYPE_INT);
-                gencode (liste_quad, QOP_OR, $1.ptr, $3.ptr, $$.ptr);
-        }
-}
 | expression '>' expression
 {
         if ($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR)
@@ -1008,42 +926,6 @@ expression : valeur
                 $$.ptr = newtemp (&tds, TYPE_NONE);
         }
 }
-| expression LOGICAL_AND expression
-{ //à revoir parce que le AND n'existe pas en MIPS
-        if ($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR)
-        {
-                $$.ptr = newtemp (&tds, TYPE_ERROR);
-        }
-        else if ($1.ptr->info.type != TYPE_INT || $1.ptr->info.sorte == SORTE_TABLEAU || $3.ptr->info.type != TYPE_INT
-                 || $3.ptr->info.sorte == SORTE_TABLEAU)
-        {
-                yyerror ("&& avec des non entiers");
-                $$.ptr = newtemp (&tds, TYPE_ERROR);
-        }
-        else
-        {
-                $$.ptr = newtemp (&tds, TYPE_INT);
-                gencode (liste_quad, QOP_AND, $1.ptr, $3.ptr, $$.ptr);
-        }
-}
-| expression LOGICAL_OR expression
-{ //à revoir parce que le OR n'existe pas en MIPS
-        if ($1.ptr->info.type == TYPE_ERROR || $3.ptr->info.type == TYPE_ERROR)
-        {
-                $$.ptr = newtemp (&tds, TYPE_ERROR);
-        }
-        else if ($1.ptr->info.type != TYPE_INT || $1.ptr->info.sorte == SORTE_TABLEAU || $3.ptr->info.type != TYPE_INT
-                 || $3.ptr->info.sorte == SORTE_TABLEAU)
-        {
-                yyerror ("|| avec des non entiers");
-                $$.ptr = newtemp (&tds, TYPE_ERROR);
-        }
-        else
-        {
-                $$.ptr = newtemp (&tds, TYPE_INT);
-                gencode (liste_quad, QOP_OR, $1.ptr, $3.ptr, $$.ptr);
-        }
-}
 | '-' expression %prec UNARY
 {
         if ($2.ptr->info.type == TYPE_ERROR)
@@ -1079,27 +961,6 @@ expression : valeur
         }
 }
 | '+' expression %prec UNARY { $$ = $2; }
-| '!' expression %prec UNARY
-{
-        if ($2.ptr->info.type == TYPE_ERROR)
-        {
-                $$.ptr = newtemp (&tds, TYPE_ERROR);
-        }
-        else if ($2.ptr->info.sorte == SORTE_TABLEAU)
-        {
-                yyerror ("! avec un tableau/une matrice");
-                $$.ptr = newtemp (&tds, TYPE_ERROR);
-        }
-        else if ($2.ptr->info.type == TYPE_FLOAT || $2.ptr->info.type == TYPE_INT)
-        {
-                $$.ptr = newtemp (&tds, TYPE_INT);
-                gencode (liste_quad, QOP_NOT, $2.ptr, NULL, $$.ptr);
-        }
-        else
-        {
-                $$.ptr = newtemp (&tds, TYPE_NONE);
-        }
-}
 | '~' expression %prec UNARY
 {
         if ($2.ptr->info.type == TYPE_ERROR)
@@ -1134,8 +995,6 @@ expression : valeur
                 $$.ptr = newtemp (&tds, TYPE_NONE);
         }
 }
-/*| '*' expression %prec UNARY
-| '&' expression %prec UNARY*/
 | '(' expression ')' { $$ = $2; }
 ;
 
@@ -1159,7 +1018,18 @@ liste_rangee :
 
 rangee : '*' {$$.type_tab = TYPE_MATRIX; /*Avoir un '*' => Matrix exclusivement*/} 
         | expression INTERV_OP expression {$$.type_tab = TYPE_NONE;}
-        | expression {$$.tailleDim = $1.ptr->info.valeur_entiere; $$.type_tab = TYPE_NONE;}
+        | expression {
+        if($1.ptr->info.sorte == SORTE_VARIABLE) 
+        {
+		fprintf(stderr, "CAS variable non géré\n");  
+		exit(1);
+        }
+        else 
+        {
+        	$$.tailleDim = $1.ptr->info.valeur_entiere; 	
+        }
+        
+        $$.type_tab = TYPE_NONE;}
 ;
 
 valeur_tableau : '{' liste_nombre '}' {$$.type_tab = $2.type_tab; 
@@ -1285,7 +1155,6 @@ valeur :
 				$$.indice_demande[1] = $2.taillesDim[1]; 
 			}
 
-
 			if(entree->info.type == TYPE_INT)
 			{
 				$$.ptr = newtemp (&tds, TYPE_INT);
@@ -1311,6 +1180,7 @@ valeur :
         			int vrai_indice = indice_dim_un * entree->info.tableau.taille_dimensions[1] + indice_dim_deux;
         			indice = insertion_constante(&tds, TYPE_INT, vrai_indice); //on ajoute le vrai indice à la table des symboles
         		}
+        		
         		gencode(liste_quad, QOP_ASSIGN, entree, indice, $$.ptr); //la case de tableau demandée se trouve dans la valeur_entiere de indice
 			}
     | incr_et_decr {
@@ -1422,10 +1292,6 @@ assign : '=' {$$ = QOP_ASSIGN;}
 	| MINUS_ASSIGN {$$ = QOP_MINUS_ASSIGN;}
 	| MULT_ASSIGN {$$ = QOP_MULT_ASSIGN;}
 	| DIV_ASSIGN {$$ = QOP_DIV_ASSIGN;}
-	| MOD_ASSIGN {$$ = QOP_MOD_ASSIGN;}
-	| AND_ASSIGN {$$ = QOP_AND_ASSIGN;}
-	| XOR_ASSIGN {$$ = QOP_XOR_ASSIGN;}
-	| OR_ASSIGN {$$ = QOP_OR_ASSIGN;}
 ;
 
 

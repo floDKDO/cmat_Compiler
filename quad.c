@@ -164,68 +164,6 @@ void affiche_quad(struct Quad* quad)
 			printf(" /= ");
 			affichage_symbole(quad->arg1);
 			break;
-		case QOP_MOD_ASSIGN:
-			affichage_symbole(quad->res);
-			printf(" %%= ");
-			affichage_symbole(quad->arg1);
-			break;
-		case QOP_AND_ASSIGN:
-			affichage_symbole(quad->res);
-			printf(" &= ");
-			affichage_symbole(quad->arg1);
-			break;
-		case QOP_XOR_ASSIGN:
-			affichage_symbole(quad->res);
-			printf(" ^= ");
-			affichage_symbole(quad->arg1);
-			break;
-		case QOP_OR_ASSIGN:
-			affichage_symbole(quad->res);
-			printf(" |= ");
-			affichage_symbole(quad->arg1);
-			break;
-		case QOP_LOGICAL_AND:
-			affichage_symbole(quad->res);
-			printf(" = ");
-			affichage_symbole(quad->arg1);
-			printf(" && ");
-			affichage_symbole(quad->arg2);
-			break;
-		case QOP_LOGICAL_OR:
-			affichage_symbole(quad->res);
-			printf(" = ");
-			affichage_symbole(quad->arg1);
-			printf(" || ");
-			affichage_symbole(quad->arg2);
-			break;
-		case QOP_AND:
-			affichage_symbole(quad->res);
-			printf(" = ");
-			affichage_symbole(quad->arg1);
-			printf(" & ");
-			affichage_symbole(quad->arg2);
-			break;
-		case QOP_OR:
-			affichage_symbole(quad->res);
-			printf(" = ");
-			affichage_symbole(quad->arg1);
-			printf(" | ");
-			affichage_symbole(quad->arg2);
-			break;
-		case QOP_XOR:
-			affichage_symbole(quad->res);
-			printf(" = ");
-			affichage_symbole(quad->arg1);
-			printf(" ^ ");
-			affichage_symbole(quad->arg2);
-			break;
-		case QOP_MOD:
-			affichage_symbole(quad->res);
-			printf(" = ");
-			affichage_symbole(quad->arg1);
-			printf(" %% ");
-			affichage_symbole(quad->arg2);
-			break;
 		case QOP_GOTO:
 			printf("goto ");
 			affichage_symbole(quad->res);
@@ -297,7 +235,14 @@ void affiche_quad_spim(struct Quad* quad)
 			break;
 	
 		case QOP_FOR:
-			fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere); //valeur de l'itérateur
+			if(quad->arg1->info.sorte == SORTE_VARIABLE)
+			{
+				fprintf(output, "\tlw $t0, _%s\n", quad->arg1->info.nom);
+			}
+			else if(quad->arg1->info.sorte == SORTE_CONSTANTE)
+			{
+				fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere); //valeur de l'itérateur
+			}
 			fprintf(output, "\tsw $t0 _%s\n", quad->res->info.nom); //mettre la valeur dans i => int i = 5; mettre la valeur 5 dans i
 			fprintf(output, "Loop%d:\n", liste_quad->compteur_label_loop);
 			break;
@@ -532,7 +477,7 @@ void affiche_quad_spim(struct Quad* quad)
 		
 			if(quad->res->info.tableau.is_matrix == false)
 			{
-				fprintf(stderr, "Tentative d'utilissation de printmat sur un tableau qui n'est pas une matrice !\n");
+				fprintf(stderr, "Tentative d'utilisation de printmat sur un tableau qui n'est pas une matrice !\n");
 				exit(1);
 			}
 		
@@ -1726,6 +1671,7 @@ void affiche_quad_spim(struct Quad* quad)
 					{
 						fprintf(output, "\tli.s $f0 %f\n", quad->arg1->info.valeur_flottante);
 						fprintf(output, "\tcvt.w.s $f0 $f0\n");
+						fprintf(output, "\ts.s $f0 _%s\n", quad->res->info.nom);
 					}
 				} 
 				else if (quad->arg1->info.sorte == SORTE_VARIABLE) 
@@ -1781,8 +1727,8 @@ void affiche_quad_spim(struct Quad* quad)
 					}
 					else
 					{
-						//si le tableau n'est pas une matrice, assignation interdite !
-						if(quad->arg1->info.tableau.is_matrix == false && quad->arg1->info.sorte == SORTE_TABLEAU)
+						//assignation tableau à une variable est interdite !
+						if(quad->res->info.sorte != SORTE_TABLEAU)
 						{
 							fprintf(stderr, "Tentative d'assignation d'un tableau qui n'est pas une matrice !\n");
 							exit(1);
@@ -1881,7 +1827,7 @@ void affiche_quad_spim(struct Quad* quad)
 							//test de validité de l'opération de transposition => arg1 est la matrice de transposition calculée, res est la matrice à gauche de l'assignation : les deux matrices doivent avoir la même taille pour que la transposition fonctionne
 							if(quad->res->info.tableau.taille_dimensions[0] != quad->arg1->info.tableau.taille_dimensions[0] || quad->res->info.tableau.taille_dimensions[1] != quad->arg1->info.tableau.taille_dimensions[1])
 							{
-								fprintf(stderr,"Les deux matrices %s(%d, %d) et %s(%d, %d) ne sont pas de tailles égales : erreur pour une transposition!\n", quad->res->info.nom, quad->res->info.tableau.taille_dimensions[0], quad->res->info.tableau.taille_dimensions[1], quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0], quad->arg1->info.tableau.taille_dimensions[1]); 
+								fprintf(stderr,"Les deux matrices %s(%d, %d) et %s(%d, %d) ne sont pas de tailles égales : erreur!\n", quad->res->info.nom, quad->res->info.tableau.taille_dimensions[0], quad->res->info.tableau.taille_dimensions[1], quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0], quad->arg1->info.tableau.taille_dimensions[1]); 
 								exit(1);
 							}
 						
@@ -1929,6 +1875,741 @@ void affiche_quad_spim(struct Quad* quad)
 				}
 			}
 			break;
+			
+			case QOP_PLUS_ASSIGN:
+
+				if (quad->res->info.type == TYPE_INT) 
+				{
+					if (quad->arg1->info.sorte == SORTE_CONSTANTE) 
+					{	
+						if (quad->arg1->info.type == TYPE_INT)
+						{
+							fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+							fprintf(output, "\tlw $t2 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tadd $t2 $t2 $t0\n");
+							fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+						}
+						else if (quad->arg1->info.type == TYPE_FLOAT) //cast float vers int
+						{
+							fprintf(output, "\tli.s $f0 %f\n", quad->arg1->info.valeur_flottante);
+							fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tcvt.w.s $f0 $f0\n");
+							fprintf(output, "\tadd.s $f1 $f1 $f0\n");
+							fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+						}
+					} 
+					else if (quad->arg1->info.sorte == SORTE_VARIABLE) 
+					{
+						if (quad->arg1->info.type == TYPE_INT)
+						{
+							fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+							fprintf(output, "\tlw $t2 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tadd $t2 $t2 $t0\n");
+							fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+						}
+						else if (quad->arg1->info.type == TYPE_FLOAT) //cast float vers int
+						{
+							fprintf(output, "\tl.s $f0 _%s\n", quad->arg1->info.nom);
+							fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tcvt.w.s $f0 $f0\n");
+							fprintf(output, "\tadd.s $f1 $f1 $f0\n");
+							fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+						}
+					}
+					else if (quad->arg1->info.sorte == SORTE_TABLEAU) 
+					{
+						if(quad->arg2 != NULL)
+						{
+							int offset = quad->arg2->info.valeur_entiere * 4; //4 = sizeof(int) en MIPS
+							
+							if(quad->arg1->info.tableau.nombre_dimension == 1)
+							{
+								if(offset > (quad->arg1->info.tableau.taille_dimensions[0] * 4) - 4)
+								{
+									fprintf(stderr, "Indice [%d] demandé dépasse la taille du tableau %s[%d]\n", quad->arg2->info.valeur_entiere, quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0]);
+									exit(1);
+								}
+							}
+							else if(quad->arg1->info.tableau.nombre_dimension == 2)
+							{
+								if(offset > (quad->arg1->info.tableau.taille_dimensions[0] * quad->arg1->info.tableau.taille_dimensions[1] * 4) - 4)
+								{
+									fprintf(stderr, "Indices demandés dépassent la taille du tableau %s[%d][%d]\n", quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0], quad->arg1->info.tableau.taille_dimensions[1]);
+									exit(1);
+								}
+							}
+							
+							if (quad->arg1->info.type == TYPE_INT)
+							{
+								fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
+								fprintf(output, "\tlw $t2 _%s\n", quad->res->info.nom);
+								fprintf(output, "\tlw $t1 %d($t0)\n", offset);
+								fprintf(output, "\tadd $t2 $t2 $t1\n");
+								fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+							}
+							else if (quad->arg1->info.type == TYPE_FLOAT) //cast float vers int
+							{
+								fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
+								fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+								fprintf(output, "\tl.s $f0 %d($t0)\n", offset);
+								fprintf(output, "\tcvt.w.s $f0 $f0\n");
+								fprintf(output, "\tadd.s $f1 $f1 $f0\n");
+								fprintf(output, "\ts.s $f0 _%s\n", quad->res->info.nom);
+							}
+						}
+						else
+						{
+							fprintf(stderr, "Tentative d'assignation d'un tableau/matrice à une variable !\n");
+							exit(1);
+						}
+					}
+				} 
+				else if (quad->res->info.type == TYPE_FLOAT) 
+				{
+					if (quad->arg1->info.sorte == SORTE_CONSTANTE) 
+					{
+						if (quad->arg1->info.type == TYPE_INT) //cast int vers float
+						{
+							fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+							fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tmtc1 $t0 $f0\n");
+							fprintf(output, "\tcvt.s.w $f0 $f0\n");
+							fprintf(output, "\tadd.s $f1 $f1 $f0\n");
+							fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+							
+						}
+						else if (quad->arg1->info.type == TYPE_FLOAT) 
+						{
+							fprintf(output, "\tli.s $f0 %f\n", quad->arg1->info.valeur_flottante);
+							fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tadd.s $f1 $f1 $f0\n");
+							fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+						}
+					} 
+					else if (quad->arg1->info.sorte == SORTE_VARIABLE) 
+					{
+						if (quad->arg1->info.type == TYPE_INT) //cast int vers float
+						{
+							fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+							fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tmtc1 $t0 $f0\n");
+							fprintf(output, "\tcvt.s.w $f0 $f0\n");
+							fprintf(output, "\tadd.s $f1 $f1 $f0\n");
+							fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+						}
+						else if (quad->arg1->info.type == TYPE_FLOAT) 
+						{
+							fprintf(output, "\tl.s $f0 _%s\n", quad->arg1->info.nom);
+							fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tadd.s $f1 $f1 $f0\n");
+							fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+						}
+					}
+					else if (quad->arg1->info.sorte == SORTE_TABLEAU) 
+					{
+						if(quad->arg2 != NULL) //avec indice 
+						{
+							//fprintf(stderr, "NOM res : %s, indice : %d, expr : %s\n", quad->res->info.nom, quad->arg2->info.valeur_entiere, quad->arg1->info.nom);
+						
+							int offset = quad->arg2->info.valeur_entiere * 4; //4 = sizeof(float) en MIPS
+							
+							if(quad->arg1->info.tableau.nombre_dimension == 1)
+							{
+								if(offset > (quad->arg1->info.tableau.taille_dimensions[0] * 4) - 4)
+								{
+									fprintf(stderr, "Indice [%d] demandé dépasse la taille du tableau %s[%d]\n", quad->arg2->info.valeur_entiere, quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0]);
+									exit(1);
+								}
+							}
+							else if(quad->arg1->info.tableau.nombre_dimension == 2)
+							{
+								if(offset > (quad->arg1->info.tableau.taille_dimensions[0] * quad->arg1->info.tableau.taille_dimensions[1] * 4) - 4)
+								{
+									fprintf(stderr, "Indices demandés dépassent la taille du tableau %s[%d][%d]\n", quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0], quad->arg1->info.tableau.taille_dimensions[1]);
+									exit(1);
+								}
+							}
+							
+							if (quad->arg1->info.type == TYPE_INT) //cast int vers float
+							{
+								fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
+								fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+								fprintf(output, "\tlw $t1 %d($t0)\n", offset);
+								fprintf(output, "\tmtc1 $t1 $f0\n");
+								fprintf(output, "\tcvt.s.w $f0 $f0\n");
+								fprintf(output, "\tadd.s $f1 $f1 $f0\n");
+								fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+								
+							}
+							else if (quad->arg1->info.type == TYPE_FLOAT) 
+							{
+								fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
+								fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+								fprintf(output, "\tl.s $f1 %d($t0)\n", offset);
+								fprintf(output, "\tadd.s $f1 $f1 $f0\n");
+								fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+							}
+						}
+						else //sans indice => matrice assignation (ex : IA = ~A)
+						{
+							fprintf(stderr, "Non géré!\n");
+							exit(1);
+						}
+					}
+				}
+				break;
+				
+				
+		case QOP_MINUS_ASSIGN:
+
+				if (quad->res->info.type == TYPE_INT) 
+				{
+					if (quad->arg1->info.sorte == SORTE_CONSTANTE) 
+					{	
+						if (quad->arg1->info.type == TYPE_INT)
+						{
+							fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+							fprintf(output, "\tlw $t2 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tsub $t2 $t2 $t0\n");
+							fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+						}
+						else if (quad->arg1->info.type == TYPE_FLOAT) //cast float vers int
+						{
+							fprintf(output, "\tli.s $f0 %f\n", quad->arg1->info.valeur_flottante);
+							fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tcvt.w.s $f0 $f0\n");
+							fprintf(output, "\tsub.s $f1 $f1 $f0\n");
+							fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+						}
+					} 
+					else if (quad->arg1->info.sorte == SORTE_VARIABLE) 
+					{
+						if (quad->arg1->info.type == TYPE_INT)
+						{
+							fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+							fprintf(output, "\tlw $t2 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tsub $t2 $t2 $t0\n");
+							fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+						}
+						else if (quad->arg1->info.type == TYPE_FLOAT) //cast float vers int
+						{
+							fprintf(output, "\tl.s $f0 _%s\n", quad->arg1->info.nom);
+							fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tcvt.w.s $f0 $f0\n");
+							fprintf(output, "\tsub.s $f1 $f1 $f0\n");
+							fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+						}
+					}
+					else if (quad->arg1->info.sorte == SORTE_TABLEAU) 
+					{
+						if(quad->arg2 != NULL)
+						{
+							int offset = quad->arg2->info.valeur_entiere * 4; //4 = sizeof(int) en MIPS
+							
+							if(quad->arg1->info.tableau.nombre_dimension == 1)
+							{
+								if(offset > (quad->arg1->info.tableau.taille_dimensions[0] * 4) - 4)
+								{
+									fprintf(stderr, "Indice [%d] demandé dépasse la taille du tableau %s[%d]\n", quad->arg2->info.valeur_entiere, quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0]);
+									exit(1);
+								}
+							}
+							else if(quad->arg1->info.tableau.nombre_dimension == 2)
+							{
+								if(offset > (quad->arg1->info.tableau.taille_dimensions[0] * quad->arg1->info.tableau.taille_dimensions[1] * 4) - 4)
+								{
+									fprintf(stderr, "Indices demandés dépassent la taille du tableau %s[%d][%d]\n", quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0], quad->arg1->info.tableau.taille_dimensions[1]);
+									exit(1);
+								}
+							}
+							
+							if (quad->arg1->info.type == TYPE_INT)
+							{
+								fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
+								fprintf(output, "\tlw $t2 _%s\n", quad->res->info.nom);
+								fprintf(output, "\tlw $t1 %d($t0)\n", offset);
+								fprintf(output, "\tsub $t2 $t2 $t1\n");
+								fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+							}
+							else if (quad->arg1->info.type == TYPE_FLOAT) //cast float vers int
+							{
+								fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
+								fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+								fprintf(output, "\tl.s $f0 %d($t0)\n", offset);
+								fprintf(output, "\tcvt.w.s $f0 $f0\n");
+								fprintf(output, "\tsub.s $f1 $f1 $f0\n");
+								fprintf(output, "\ts.s $f0 _%s\n", quad->res->info.nom);
+							}
+						}
+						else
+						{
+							fprintf(stderr, "Tentative d'assignation d'un tableau/matrice à une variable !\n");
+							exit(1);
+						}
+					}
+				} 
+				else if (quad->res->info.type == TYPE_FLOAT) 
+				{
+					if (quad->arg1->info.sorte == SORTE_CONSTANTE) 
+					{
+						if (quad->arg1->info.type == TYPE_INT) //cast int vers float
+						{
+							fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+							fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tmtc1 $t0 $f0\n");
+							fprintf(output, "\tcvt.s.w $f0 $f0\n");
+							fprintf(output, "\tsub.s $f1 $f1 $f0\n");
+							fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+							
+						}
+						else if (quad->arg1->info.type == TYPE_FLOAT) 
+						{
+							fprintf(output, "\tli.s $f0 %f\n", quad->arg1->info.valeur_flottante);
+							fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tsub.s $f1 $f1 $f0\n");
+							fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+						}
+					} 
+					else if (quad->arg1->info.sorte == SORTE_VARIABLE) 
+					{
+						if (quad->arg1->info.type == TYPE_INT) //cast int vers float
+						{
+							fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+							fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tmtc1 $t0 $f0\n");
+							fprintf(output, "\tcvt.s.w $f0 $f0\n");
+							fprintf(output, "\tsub.s $f1 $f1 $f0\n");
+							fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+						}
+						else if (quad->arg1->info.type == TYPE_FLOAT) 
+						{
+							fprintf(output, "\tl.s $f0 _%s\n", quad->arg1->info.nom);
+							fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tsub.s $f1 $f1 $f0\n");
+							fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+						}
+					}
+					else if (quad->arg1->info.sorte == SORTE_TABLEAU) 
+					{
+						if(quad->arg2 != NULL) //avec indice 
+						{
+							//fprintf(stderr, "NOM res : %s, indice : %d, expr : %s\n", quad->res->info.nom, quad->arg2->info.valeur_entiere, quad->arg1->info.nom);
+						
+							int offset = quad->arg2->info.valeur_entiere * 4; //4 = sizeof(float) en MIPS
+							
+							if(quad->arg1->info.tableau.nombre_dimension == 1)
+							{
+								if(offset > (quad->arg1->info.tableau.taille_dimensions[0] * 4) - 4)
+								{
+									fprintf(stderr, "Indice [%d] demandé dépasse la taille du tableau %s[%d]\n", quad->arg2->info.valeur_entiere, quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0]);
+									exit(1);
+								}
+							}
+							else if(quad->arg1->info.tableau.nombre_dimension == 2)
+							{
+								if(offset > (quad->arg1->info.tableau.taille_dimensions[0] * quad->arg1->info.tableau.taille_dimensions[1] * 4) - 4)
+								{
+									fprintf(stderr, "Indices demandés dépassent la taille du tableau %s[%d][%d]\n", quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0], quad->arg1->info.tableau.taille_dimensions[1]);
+									exit(1);
+								}
+							}
+							
+							if (quad->arg1->info.type == TYPE_INT) //cast int vers float
+							{
+								fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
+								fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+								fprintf(output, "\tlw $t1 %d($t0)\n", offset);
+								fprintf(output, "\tmtc1 $t1 $f0\n");
+								fprintf(output, "\tcvt.s.w $f0 $f0\n");
+								fprintf(output, "\tsub.s $f1 $f1 $f0\n");
+								fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+								
+							}
+							else if (quad->arg1->info.type == TYPE_FLOAT) 
+							{
+								fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
+								fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+								fprintf(output, "\tl.s $f1 %d($t0)\n", offset);
+								fprintf(output, "\tsub.s $f1 $f1 $f0\n");
+								fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+							}
+						}
+						else //sans indice => matrice assignation (ex : IA = ~A)
+						{
+						
+							fprintf(stderr, "Non géré!\n");
+							exit(1);
+						}
+					}
+				}
+				break;
+				
+		case QOP_MULT_ASSIGN:
+
+				if (quad->res->info.type == TYPE_INT) 
+				{
+					if (quad->arg1->info.sorte == SORTE_CONSTANTE) 
+					{	
+						if (quad->arg1->info.type == TYPE_INT)
+						{
+							fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+							fprintf(output, "\tlw $t2 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tmul $t2 $t2 $t0\n");
+							fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+						}
+						else if (quad->arg1->info.type == TYPE_FLOAT) //cast float vers int
+						{
+							fprintf(output, "\tli.s $f0 %f\n", quad->arg1->info.valeur_flottante);
+							fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tcvt.w.s $f0 $f0\n");
+							fprintf(output, "\tmul.s $f1 $f1 $f0\n");
+							fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+						}
+					} 
+					else if (quad->arg1->info.sorte == SORTE_VARIABLE) 
+					{
+						if (quad->arg1->info.type == TYPE_INT)
+						{
+							fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+							fprintf(output, "\tlw $t2 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tmul $t2 $t2 $t0\n");
+							fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+						}
+						else if (quad->arg1->info.type == TYPE_FLOAT) //cast float vers int
+						{
+							fprintf(output, "\tl.s $f0 _%s\n", quad->arg1->info.nom);
+							fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tcvt.w.s $f0 $f0\n");
+							fprintf(output, "\tmul.s $f1 $f1 $f0\n");
+							fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+						}
+					}
+					else if (quad->arg1->info.sorte == SORTE_TABLEAU) 
+					{
+						if(quad->arg2 != NULL)
+						{
+							int offset = quad->arg2->info.valeur_entiere * 4; //4 = sizeof(int) en MIPS
+							
+							if(quad->arg1->info.tableau.nombre_dimension == 1)
+							{
+								if(offset > (quad->arg1->info.tableau.taille_dimensions[0] * 4) - 4)
+								{
+									fprintf(stderr, "Indice [%d] demandé dépasse la taille du tableau %s[%d]\n", quad->arg2->info.valeur_entiere, quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0]);
+									exit(1);
+								}
+							}
+							else if(quad->arg1->info.tableau.nombre_dimension == 2)
+							{
+								if(offset > (quad->arg1->info.tableau.taille_dimensions[0] * quad->arg1->info.tableau.taille_dimensions[1] * 4) - 4)
+								{
+									fprintf(stderr, "Indices demandés dépassent la taille du tableau %s[%d][%d]\n", quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0], quad->arg1->info.tableau.taille_dimensions[1]);
+									exit(1);
+								}
+							}
+							
+							if (quad->arg1->info.type == TYPE_INT)
+							{
+								fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
+								fprintf(output, "\tlw $t2 _%s\n", quad->res->info.nom);
+								fprintf(output, "\tlw $t1 %d($t0)\n", offset);
+								fprintf(output, "\tmul $t2 $t2 $t1\n");
+								fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+							}
+							else if (quad->arg1->info.type == TYPE_FLOAT) //cast float vers int
+							{
+								fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
+								fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+								fprintf(output, "\tl.s $f0 %d($t0)\n", offset);
+								fprintf(output, "\tcvt.w.s $f0 $f0\n");
+								fprintf(output, "\tmul.s $f1 $f1 $f0\n");
+								fprintf(output, "\ts.s $f0 _%s\n", quad->res->info.nom);
+							}
+						}
+						else
+						{
+							fprintf(stderr, "Tentative d'assignation d'un tableau/matrice à une variable !\n");
+							exit(1);
+						}
+					}
+				} 
+				else if (quad->res->info.type == TYPE_FLOAT) 
+				{
+					if (quad->arg1->info.sorte == SORTE_CONSTANTE) 
+					{
+						if (quad->arg1->info.type == TYPE_INT) //cast int vers float
+						{
+							fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+							fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tmtc1 $t0 $f0\n");
+							fprintf(output, "\tcvt.s.w $f0 $f0\n");
+							fprintf(output, "\tmul.s $f1 $f1 $f0\n");
+							fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+							
+						}
+						else if (quad->arg1->info.type == TYPE_FLOAT) 
+						{
+							fprintf(output, "\tli.s $f0 %f\n", quad->arg1->info.valeur_flottante);
+							fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tmul.s $f1 $f1 $f0\n");
+							fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+						}
+					} 
+					else if (quad->arg1->info.sorte == SORTE_VARIABLE) 
+					{
+						if (quad->arg1->info.type == TYPE_INT) //cast int vers float
+						{
+							fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+							fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tmtc1 $t0 $f0\n");
+							fprintf(output, "\tcvt.s.w $f0 $f0\n");
+							fprintf(output, "\tmul.s $f1 $f1 $f0\n");
+							fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+						}
+						else if (quad->arg1->info.type == TYPE_FLOAT) 
+						{
+							fprintf(output, "\tl.s $f0 _%s\n", quad->arg1->info.nom);
+							fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tmul.s $f1 $f1 $f0\n");
+							fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+						}
+					}
+					else if (quad->arg1->info.sorte == SORTE_TABLEAU) 
+					{
+						if(quad->arg2 != NULL) //avec indice 
+						{
+							//fprintf(stderr, "NOM res : %s, indice : %d, expr : %s\n", quad->res->info.nom, quad->arg2->info.valeur_entiere, quad->arg1->info.nom);
+						
+							int offset = quad->arg2->info.valeur_entiere * 4; //4 = sizeof(float) en MIPS
+							
+							if(quad->arg1->info.tableau.nombre_dimension == 1)
+							{
+								if(offset > (quad->arg1->info.tableau.taille_dimensions[0] * 4) - 4)
+								{
+									fprintf(stderr, "Indice [%d] demandé dépasse la taille du tableau %s[%d]\n", quad->arg2->info.valeur_entiere, quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0]);
+									exit(1);
+								}
+							}
+							else if(quad->arg1->info.tableau.nombre_dimension == 2)
+							{
+								if(offset > (quad->arg1->info.tableau.taille_dimensions[0] * quad->arg1->info.tableau.taille_dimensions[1] * 4) - 4)
+								{
+									fprintf(stderr, "Indices demandés dépassent la taille du tableau %s[%d][%d]\n", quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0], quad->arg1->info.tableau.taille_dimensions[1]);
+									exit(1);
+								}
+							}
+							
+							if (quad->arg1->info.type == TYPE_INT) //cast int vers float
+							{
+								fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
+								fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+								fprintf(output, "\tlw $t1 %d($t0)\n", offset);
+								fprintf(output, "\tmtc1 $t1 $f0\n");
+								fprintf(output, "\tcvt.s.w $f0 $f0\n");
+								fprintf(output, "\tmul.s $f1 $f1 $f0\n");
+								fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+								
+							}
+							else if (quad->arg1->info.type == TYPE_FLOAT) 
+							{
+								fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
+								fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+								fprintf(output, "\tl.s $f1 %d($t0)\n", offset);
+								fprintf(output, "\tmul.s $f1 $f1 $f0\n");
+								fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+							}
+						}
+						else //sans indice => matrice assignation (ex : IA = ~A)
+						{
+						
+							fprintf(stderr, "Non géré!\n");
+							exit(1);
+						}
+					}
+				}
+				break;
+				
+		case QOP_DIV_ASSIGN:
+
+				if (quad->res->info.type == TYPE_INT) 
+				{
+					if (quad->arg1->info.sorte == SORTE_CONSTANTE) 
+					{	
+						if (quad->arg1->info.type == TYPE_INT)
+						{
+							fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+							fprintf(output, "\tlw $t2 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tdiv $t2 $t2 $t0\n");
+							fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+						}
+						else if (quad->arg1->info.type == TYPE_FLOAT) //cast float vers int
+						{
+							fprintf(output, "\tli.s $f0 %f\n", quad->arg1->info.valeur_flottante);
+							fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tcvt.w.s $f0 $f0\n");
+							fprintf(output, "\tdiv.s $f1 $f1 $f0\n");
+							fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+						}
+					} 
+					else if (quad->arg1->info.sorte == SORTE_VARIABLE) 
+					{
+						if (quad->arg1->info.type == TYPE_INT)
+						{
+							fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+							fprintf(output, "\tlw $t2 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tdiv $t2 $t2 $t0\n");
+							fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+						}
+						else if (quad->arg1->info.type == TYPE_FLOAT) //cast float vers int
+						{
+							fprintf(output, "\tl.s $f0 _%s\n", quad->arg1->info.nom);
+							fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tcvt.w.s $f0 $f0\n");
+							fprintf(output, "\tdiv.s $f1 $f1 $f0\n");
+							fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+						}
+					}
+					else if (quad->arg1->info.sorte == SORTE_TABLEAU) 
+					{
+						if(quad->arg2 != NULL)
+						{
+							int offset = quad->arg2->info.valeur_entiere * 4; //4 = sizeof(int) en MIPS
+							
+							if(quad->arg1->info.tableau.nombre_dimension == 1)
+							{
+								if(offset > (quad->arg1->info.tableau.taille_dimensions[0] * 4) - 4)
+								{
+									fprintf(stderr, "Indice [%d] demandé dépasse la taille du tableau %s[%d]\n", quad->arg2->info.valeur_entiere, quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0]);
+									exit(1);
+								}
+							}
+							else if(quad->arg1->info.tableau.nombre_dimension == 2)
+							{
+								if(offset > (quad->arg1->info.tableau.taille_dimensions[0] * quad->arg1->info.tableau.taille_dimensions[1] * 4) - 4)
+								{
+									fprintf(stderr, "Indices demandés dépassent la taille du tableau %s[%d][%d]\n", quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0], quad->arg1->info.tableau.taille_dimensions[1]);
+									exit(1);
+								}
+							}
+							
+							if (quad->arg1->info.type == TYPE_INT)
+							{
+								fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
+								fprintf(output, "\tlw $t2 _%s\n", quad->res->info.nom);
+								fprintf(output, "\tlw $t1 %d($t0)\n", offset);
+								fprintf(output, "\tdiv $t2 $t2 $t1\n");
+								fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
+							}
+							else if (quad->arg1->info.type == TYPE_FLOAT) //cast float vers int
+							{
+								fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
+								fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+								fprintf(output, "\tl.s $f0 %d($t0)\n", offset);
+								fprintf(output, "\tcvt.w.s $f0 $f0\n");
+								fprintf(output, "\tdiv.s $f1 $f1 $f0\n");
+								fprintf(output, "\ts.s $f0 _%s\n", quad->res->info.nom);
+							}
+						}
+						else
+						{
+							fprintf(stderr, "Tentative d'assignation d'un tableau/matrice à une variable !\n");
+							exit(1);
+						}
+					}
+				} 
+				else if (quad->res->info.type == TYPE_FLOAT) 
+				{
+					if (quad->arg1->info.sorte == SORTE_CONSTANTE) 
+					{
+						if (quad->arg1->info.type == TYPE_INT) //cast int vers float
+						{
+							fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
+							fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tmtc1 $t0 $f0\n");
+							fprintf(output, "\tcvt.s.w $f0 $f0\n");
+							fprintf(output, "\tdiv.s $f1 $f1 $f0\n");
+							fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+							
+						}
+						else if (quad->arg1->info.type == TYPE_FLOAT) 
+						{
+							fprintf(output, "\tli.s $f0 %f\n", quad->arg1->info.valeur_flottante);
+							fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tdiv.s $f1 $f1 $f0\n");
+							fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+						}
+					} 
+					else if (quad->arg1->info.sorte == SORTE_VARIABLE) 
+					{
+						if (quad->arg1->info.type == TYPE_INT) //cast int vers float
+						{
+							fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
+							fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tmtc1 $t0 $f0\n");
+							fprintf(output, "\tcvt.s.w $f0 $f0\n");
+							fprintf(output, "\tdiv.s $f1 $f1 $f0\n");
+							fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+						}
+						else if (quad->arg1->info.type == TYPE_FLOAT) 
+						{
+							fprintf(output, "\tl.s $f0 _%s\n", quad->arg1->info.nom);
+							fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+							fprintf(output, "\tdiv.s $f1 $f1 $f0\n");
+							fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+						}
+					}
+					else if (quad->arg1->info.sorte == SORTE_TABLEAU) 
+					{
+						if(quad->arg2 != NULL) //avec indice 
+						{
+							//fprintf(stderr, "NOM res : %s, indice : %d, expr : %s\n", quad->res->info.nom, quad->arg2->info.valeur_entiere, quad->arg1->info.nom);
+						
+							int offset = quad->arg2->info.valeur_entiere * 4; //4 = sizeof(float) en MIPS
+							
+							if(quad->arg1->info.tableau.nombre_dimension == 1)
+							{
+								if(offset > (quad->arg1->info.tableau.taille_dimensions[0] * 4) - 4)
+								{
+									fprintf(stderr, "Indice [%d] demandé dépasse la taille du tableau %s[%d]\n", quad->arg2->info.valeur_entiere, quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0]);
+									exit(1);
+								}
+							}
+							else if(quad->arg1->info.tableau.nombre_dimension == 2)
+							{
+								if(offset > (quad->arg1->info.tableau.taille_dimensions[0] * quad->arg1->info.tableau.taille_dimensions[1] * 4) - 4)
+								{
+									fprintf(stderr, "Indices demandés dépassent la taille du tableau %s[%d][%d]\n", quad->arg1->info.nom, quad->arg1->info.tableau.taille_dimensions[0], quad->arg1->info.tableau.taille_dimensions[1]);
+									exit(1);
+								}
+							}
+							
+							if (quad->arg1->info.type == TYPE_INT) //cast int vers float
+							{
+								fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
+								fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+								fprintf(output, "\tlw $t1 %d($t0)\n", offset);
+								fprintf(output, "\tmtc1 $t1 $f0\n");
+								fprintf(output, "\tcvt.s.w $f0 $f0\n");
+								fprintf(output, "\tdiv.s $f1 $f1 $f0\n");
+								fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+								
+							}
+							else if (quad->arg1->info.type == TYPE_FLOAT) 
+							{
+								fprintf(output, "\tla $t0 _%s\n", quad->arg1->info.nom);
+								fprintf(output, "\tl.s $f1 _%s\n", quad->res->info.nom);
+								fprintf(output, "\tl.s $f1 %d($t0)\n", offset);
+								fprintf(output, "\tdiv.s $f1 $f1 $f0\n");
+								fprintf(output, "\ts.s $f1 _%s\n", quad->res->info.nom);
+							}
+						}
+						else //sans indice => matrice assignation (ex : IA = ~A)
+						{
+							fprintf(stderr, "Non géré!\n");
+							exit(1);
+						}
+					}
+				}
+				break;
 			
 		case QOP_ASSIGN_TAB:
 			if (quad->res->info.type == TYPE_INT && quad->res->info.sorte == SORTE_TABLEAU) 
@@ -1985,70 +2666,7 @@ void affiche_quad_spim(struct Quad* quad)
 			}
 			break;
 
-		case QOP_AND:
-			if (quad->arg1->info.sorte == SORTE_CONSTANTE)
-			{
-				fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
-			} else {
-				fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
-			}
-			if (quad->arg2->info.sorte == SORTE_CONSTANTE)
-			{
-				fprintf(output, "\tandi $t2 $t0 %d\n", quad->arg1->info.valeur_entiere);
-			} else {
-				fprintf(output, "\tlw $t1 _%s\n", quad->arg1->info.nom);
-				fprintf(output, "\tand $t2 $t0 $t1\n");
-			}
-			fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
-			break;
-		case QOP_OR:
-			if (quad->arg1->info.sorte == SORTE_CONSTANTE)
-			{
-				fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
-			} else {
-				fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
-			}
-			if (quad->arg2->info.sorte == SORTE_CONSTANTE)
-			{
-				fprintf(output, "\tori $t2 $t0 %d\n", quad->arg1->info.valeur_entiere);
-			} else {
-				fprintf(output, "\tlw $t1 _%s\n", quad->arg1->info.nom);
-				fprintf(output, "\tor $t2 $t0 $t1\n");
-			}
-			fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
-			break;
-		case QOP_XOR:
-			if (quad->arg1->info.sorte == SORTE_CONSTANTE)
-			{
-				fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
-			} else {
-				fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
-			}
-			if (quad->arg2->info.sorte == SORTE_CONSTANTE)
-			{
-				fprintf(output, "\txori $t2 $t0 %d\n", quad->arg1->info.valeur_entiere);
-			} else {
-				fprintf(output, "\tlw $t1 _%s\n", quad->arg1->info.nom);
-				fprintf(output, "\txor $t2 $t0 $t1\n");
-			}
-			fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
-			break;
-		case QOP_MOD:
-			if (quad->arg1->info.sorte == SORTE_CONSTANTE)
-			{
-				fprintf(output, "\tli $t0 %d\n", quad->arg1->info.valeur_entiere);
-			} else {
-				fprintf(output, "\tlw $t0 _%s\n", quad->arg1->info.nom);
-			}
-			if (quad->arg2->info.sorte == SORTE_CONSTANTE)
-			{
-				fprintf(output, "\tli $t1 %d\n", quad->arg1->info.valeur_entiere);
-			} else {
-				fprintf(output, "\tlw $t1 _%s\n", quad->arg1->info.nom);
-			}
-			fprintf(output, "\trem $t2 $t0 $t1\n");
-			fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
-			break;
+	
 		case QOP_NOT:
 			if (quad->arg1->info.sorte == SORTE_CONSTANTE)
 			{
