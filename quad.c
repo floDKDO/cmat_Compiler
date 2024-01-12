@@ -1430,43 +1430,6 @@ void affiche_quad_spim(struct Quad* quad)
 				else if (quad->arg1->info.sorte == SORTE_TABLEAU && quad->arg1->info.tableau.is_matrix == true && quad->arg2->info.sorte == SORTE_TABLEAU && quad->arg2->info.tableau.is_matrix == true)
 				{
 					//cas deux matrices : matrice1 * matrice2
-					
-					/*fprintf(output, "\tla $s0, _%s\n", quad->res->info.nom);
-					fprintf(output, "\tla $s1, _%s\n", quad->arg1->info.nom);
-					fprintf(output, "\tla $s2, _%s\n", quad->arg2->info.nom);
-					
-					if(quad->res->info.tableau.nombre_dimension == 1)
-					{
-						//longueur du tableau
-						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0]);
-					}
-					else
-					{
-						//longueur du tableau
-						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0] * quad->res->info.tableau.taille_dimensions[1]);
-					}
-
-					fprintf(output, "Loop%d:\n", liste_quad->compteur_label_loop);
-					fprintf(output, "\tl.s $f2, 0($s1)\n");
-					fprintf(output, "\tl.s $f4, 0($s2)\n");
-					
-					// +constante
-					fprintf(output, "\tmul.s $f2, $f2, $f4\n");  
-
-					fprintf(output, "\ts.s $f2, 0($s0)\n");
-
-					//prochain élément
-					fprintf(output, "\taddi $s0, $s0, 4\n");
-					fprintf(output, "\taddi $s1, $s1, 4\n");
-					fprintf(output, "\taddi $s2, $s2, 4\n");
-
-					//i--
-					fprintf(output, "\taddi $t0, $t0, -1\n");
-
-					//Continue the loop if the loop counter is not zero
-					fprintf(output, "\tbnez $t0, Loop%d\n", liste_quad->compteur_label_loop);
-					liste_quad->compteur_label_loop += 1;*/
-					
 				}
 			}
 			break;
@@ -1616,43 +1579,6 @@ void affiche_quad_spim(struct Quad* quad)
 				else if (quad->arg1->info.sorte == SORTE_TABLEAU && quad->arg1->info.tableau.is_matrix == true && quad->arg2->info.sorte == SORTE_TABLEAU && quad->arg2->info.tableau.is_matrix == true)
 				{
 					//cas deux matrices : matrice1 * matrice2
-					
-					/*fprintf(output, "\tla $s0, _%s\n", quad->res->info.nom);
-					fprintf(output, "\tla $s1, _%s\n", quad->arg1->info.nom);
-					fprintf(output, "\tla $s2, _%s\n", quad->arg2->info.nom);
-					
-					if(quad->res->info.tableau.nombre_dimension == 1)
-					{
-						//longueur du tableau
-						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0]);
-					}
-					else
-					{
-						//longueur du tableau
-						fprintf(output, "\tli $t0, %d\n", quad->res->info.tableau.taille_dimensions[0] * quad->res->info.tableau.taille_dimensions[1]);
-					}
-
-					fprintf(output, "Loop%d:\n", liste_quad->compteur_label_loop);
-					fprintf(output, "\tl.s $f2, 0($s1)\n");
-					fprintf(output, "\tl.s $f4, 0($s2)\n");
-					
-					// +constante
-					fprintf(output, "\tdiv.s $f2, $f2, $f4\n");  
-
-					fprintf(output, "\ts.s $f2, 0($s0)\n");
-
-					//prochain élément
-					fprintf(output, "\taddi $s0, $s0, 4\n");
-					fprintf(output, "\taddi $s1, $s1, 4\n");
-					fprintf(output, "\taddi $s2, $s2, 4\n");
-
-					//i--
-					fprintf(output, "\taddi $t0, $t0, -1\n");
-
-					//Continue the loop if the loop counter is not zero
-					fprintf(output, "\tbnez $t0, Loop%d\n", liste_quad->compteur_label_loop);
-					liste_quad->compteur_label_loop += 1;*/
-					
 				}
 			}
 			break;
@@ -1774,8 +1700,6 @@ void affiche_quad_spim(struct Quad* quad)
 				{
 					if(quad->arg2 != NULL) //avec indice 
 					{
-						//fprintf(stderr, "NOM res : %s, indice : %d, expr : %s\n", quad->res->info.nom, quad->arg2->info.valeur_entiere, quad->arg1->info.nom);
-					
 						int offset = quad->arg2->info.valeur_entiere * 4; //4 = sizeof(float) en MIPS
 						
 						if(quad->arg1->info.tableau.nombre_dimension == 1)
@@ -1813,7 +1737,6 @@ void affiche_quad_spim(struct Quad* quad)
 					}
 					else //sans indice => matrice assignation (ex : IA = ~A)
 					{
-					
 						//si le tableau n'est pas une matrice, assignation interdite !
 						if(quad->arg1->info.tableau.is_matrix == false && quad->res->info.sorte == SORTE_TABLEAU)
 						{
@@ -2009,8 +1932,6 @@ void affiche_quad_spim(struct Quad* quad)
 					{
 						if(quad->arg2 != NULL) //avec indice 
 						{
-							//fprintf(stderr, "NOM res : %s, indice : %d, expr : %s\n", quad->res->info.nom, quad->arg2->info.valeur_entiere, quad->arg1->info.nom);
-						
 							int offset = quad->arg2->info.valeur_entiere * 4; //4 = sizeof(float) en MIPS
 							
 							if(quad->arg1->info.tableau.nombre_dimension == 1)
@@ -2193,8 +2114,6 @@ void affiche_quad_spim(struct Quad* quad)
 					{
 						if(quad->arg2 != NULL) //avec indice 
 						{
-							//fprintf(stderr, "NOM res : %s, indice : %d, expr : %s\n", quad->res->info.nom, quad->arg2->info.valeur_entiere, quad->arg1->info.nom);
-						
 							int offset = quad->arg2->info.valeur_entiere * 4; //4 = sizeof(float) en MIPS
 							
 							if(quad->arg1->info.tableau.nombre_dimension == 1)
@@ -2377,8 +2296,6 @@ void affiche_quad_spim(struct Quad* quad)
 					{
 						if(quad->arg2 != NULL) //avec indice 
 						{
-							//fprintf(stderr, "NOM res : %s, indice : %d, expr : %s\n", quad->res->info.nom, quad->arg2->info.valeur_entiere, quad->arg1->info.nom);
-						
 							int offset = quad->arg2->info.valeur_entiere * 4; //4 = sizeof(float) en MIPS
 							
 							if(quad->arg1->info.tableau.nombre_dimension == 1)
@@ -2561,8 +2478,6 @@ void affiche_quad_spim(struct Quad* quad)
 					{
 						if(quad->arg2 != NULL) //avec indice 
 						{
-							//fprintf(stderr, "NOM res : %s, indice : %d, expr : %s\n", quad->res->info.nom, quad->arg2->info.valeur_entiere, quad->arg1->info.nom);
-						
 							int offset = quad->arg2->info.valeur_entiere * 4; //4 = sizeof(float) en MIPS
 							
 							if(quad->arg1->info.tableau.nombre_dimension == 1)
@@ -2814,7 +2729,7 @@ void affiche_quad_spim(struct Quad* quad)
 				fprintf(output, "\tsge $t2 $t0 $t1\n");
 				fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
 			} else {
-				//TODO
+				
 			}
 			break;
 		case QOP_GT:
@@ -2835,7 +2750,7 @@ void affiche_quad_spim(struct Quad* quad)
 				fprintf(output, "\tsgt $t2 $t0 $t1\n");
 				fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
 			} else {
-				//TODO
+				
 			}
 			break;
 		case QOP_EQ:
@@ -2891,7 +2806,7 @@ void affiche_quad_spim(struct Quad* quad)
 				fprintf(output, "\tsw $t2 _%s\n", quad->res->info.nom);
 			} 
 			else {
-				//TODO
+				
 			}
 			break;
 

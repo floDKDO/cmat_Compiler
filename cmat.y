@@ -94,7 +94,7 @@ int action_incr_et_decr = 0; //0 ou 1 ou 2 ou 3 selon l'action de incr et decr p
 
 %start programme
 
-%% //grammaire temporaire
+%% 
 
 //Créer une liste de declaration_fonction si on ajoute les fonction en dehors du main
 programme : main {return syntax_error;}
@@ -130,19 +130,12 @@ condition : IF '(' expression {struct noeud* entree = get_symbole(tds, $3.ptr->i
 boucle : boucle_for | boucle_while
 ;
 
-/*Vrai boucle for, mais pas celle qui est demandé
-boucle_for : FOR '(' initial_declaration ';' liste_operation ';' liste_operation ')' corps
-;
-
-initial_declaration : declaration_variable | liste_operation
-;*/
-
 iterateur_boucle_for: type IDENT {struct noeud* entree = insertion(&tds, $2, SORTE_VARIABLE, $1); $$.ptr = entree;}
 		    | IDENT {struct noeud* entree = get_symbole(tds, $1); $$.ptr = entree;}
+;
 
-// Boucle for moins poussée
 boucle_for : FOR '(' iterateur_boucle_for
-'=' expression {struct noeud* entree = get_symbole(tds, $5.ptr->info.nom); gencode(liste_quad, QOP_FOR, entree, NULL, $<exprval>3.ptr); /*$<exprval>$.ptr = entree;*/}
+'=' expression {struct noeud* entree = get_symbole(tds, $5.ptr->info.nom); gencode(liste_quad, QOP_FOR, entree, NULL, $<exprval>3.ptr);}
 ';' expression {gencode(liste_quad, QOP_HALF_FOR, NULL, NULL, $8.ptr);} ';' {execute_action_incr_et_decr = false;} incr_et_decr {execute_action_incr_et_decr = true;} 
 ')' corps{
 	//il faut effectuer l'incrémentation/décrémentation maintenant
@@ -183,7 +176,7 @@ boucle_while : WHILE '(' {gencode(liste_quad, QOP_WHILE, NULL, NULL, NULL);} exp
 declaration_variable : type liste_variable_declaree 
 	{
 		for(int i = 0; i < indice_tab_str; i++) 
-		{ //mettre le type dans la tds
+		{ 	//mettre le type dans la tds
 			struct noeud* noeud = get_symbole(tds, $2[i]);
 			if(noeud != NULL)
 			{
@@ -199,7 +192,6 @@ declaration_variable : type liste_variable_declaree
 							    noeud->info.tableau.valeurs_flottantes_tableau[i] = (float)noeud->info.tableau.valeurs_entieres_tableau[i];
 							    noeud->info.tableau.valeurs_entieres_tableau[i] = 0;
 							}
-							//noeud->info.tableau.taille_dimensions[1] = 1;
 						}
 						else if(noeud->info.tableau.nombre_dimension == 2)
 						{
@@ -223,15 +215,12 @@ declaration_variable : type liste_variable_declaree
 					}	
 						
 				}
-				else //if(noeud->info.tableau.is_matrix == false)
+				else 
 				{
 					noeud->info.type = $1;
 				}
 			}
 		}
-		
-		/*indice = 0; //reset indice de liste_entiers et liste_flottants
-		last_index = indice; //reset*/
 	}
 ;
 
@@ -242,10 +231,10 @@ liste_variable_declaree : liste_variable_declaree ',' variable_declaree {
 				last_index = indice; //reset
 			}
 			| variable_declaree {
-			strcpy($$[indice_tab_str], $1); 
-			indice_tab_str += 1; 
-			indice = 0; //reset indice de liste_entiers et liste_flottants
-			last_index = indice; //reset
+				strcpy($$[indice_tab_str], $1); 
+				indice_tab_str += 1; 
+				indice = 0; //reset indice de liste_entiers et liste_flottants
+				last_index = indice; //reset
 			}
 ;
 
@@ -256,9 +245,8 @@ variable_declaree :
 		{
 			fprintf(stderr,"Previous declaration of %s exists\n", $1); 
 			exit(1);
-		} 
-		
-		/*strcpy($$, $1);*/}
+		}
+	}
 	| IDENT assign expression {
     
 		struct noeud* entree = insertion(&tds, $1, SORTE_VARIABLE, TYPE_NONE);
@@ -293,7 +281,6 @@ variable_declaree :
         	{
 			gencode(liste_quad, $2, $3.ptr, NULL, entree);
 		}
-		//strcpy($$, $1);
 	}
     | IDENT intervalle_dimension {
     		struct noeud* entree = insertion_tableau(&tds, $1, TYPE_NONE, $2.nDim, $2.taillesDim); 
@@ -1076,14 +1063,11 @@ valeur_tableau : '{' liste_nombre '}' {$$.type_tab = $2.type_tab;
 					}
 					
 					last_index = indice;
-					
-					/*$$ = $2; $$.nDim = 1;*/
-					
 					}
 		| '{' liste_tableau '}' {$$ = $2; $$.nDim = $2.nDim + 1;}
 ;
 		
-liste_tableau : liste_tableau ',' valeur_tableau {/*$$.nDim = ($1.nDim >= $3.nDim ? $1.nDim : $3.nDim);*/ 
+liste_tableau : liste_tableau ',' valeur_tableau {
 					if($3.type_tab == TYPE_INT)
 						memcpy($$.listeValeursEntieres, $3.listeValeursEntieres, 1024*sizeof(int)); //remonter les valeurs dans $$
 					else if($3.type_tab == TYPE_FLOAT)

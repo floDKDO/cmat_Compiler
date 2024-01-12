@@ -39,44 +39,6 @@ struct tds* creation_tds(int taille_max, int taille_actuelle)
 	return tds;
 }
 
-
-//fonction de rehashing : elle est appelée quand le load factor >= 0.75
-//elle créee une nouvelle tds 2 fois plus grande que l'ancienne
-//et remet toutes les anciennes entrées dans cette nouvelle table en les rehashant selon la taille de la nouvelle tds
-/*void rehashing(struct tds** tds)
-{
-	int new_taille_max = (*tds)->taille_max * 2;
-
-	struct tds* new_tds = creation_tds(new_taille_max, 0);
-
-	struct noeud* noeud;
-
-	for(int i = 0; i < (*tds)->taille_max; i++) //parcourir l'ancienne tds
-	{
-	    if((*tds)->listes[i] == NULL) //entrée vide, rien à mettre dans la nouvelle tds : passer à l'itération suivante
-	    {
-		continue;
-	    }
-	    else
-	    {
-		//mettre tous les noeuds de la liste chaînée de l'entrée i dans la nouvelle tds
-		while((*tds)->listes[i] != NULL)
-		{
-		    noeud = (*tds)->listes[i];
-		    if(noeud->info.sorte == SORTE_CONSTANTE)
-		    	insertion_constante(&new_tds, (*tds)->listes[i]->info.type, (*tds)->listes[i]->info.constante.valeur); //insérer ce noeud à l'indice dans la nouvelle tds
-		    else insertion(&new_tds, (*tds)->listes[i]->info.nom, (*tds)->listes[i]->info.sorte, (*tds)->listes[i]->info.type); //insérer ce noeud à l'indice dans la nouvelle tds
-		    
-		    (*tds)->listes[i] = (*tds)->listes[i]->suivant;
-		    free(noeud->info.nom);
-		    free(noeud);
-		}
-	    }
-	}
-	destruction_tds(*tds);
-	*tds = new_tds;
-}*/
-
 void destruction_tds(struct tds* tds)
 {
    	struct noeud* temp;
@@ -144,8 +106,6 @@ struct noeud* insertion(struct tds** tds, char* nom, enum sorte sorte, enum type
     //cas 1 : ajout dans une entrée vide
     if((*tds)->listes[indice] == NULL)
     {
-        //printf("ENTREE %d VIDE : AJOUT DE %s DANS LA TABLE\n", indice, nom);
-        
         //créer l'entrée
         NCHK(noeud = malloc(sizeof(struct noeud)));
         noeud->suivant = NULL;
@@ -167,15 +127,11 @@ struct noeud* insertion(struct tds** tds, char* nom, enum sorte sorte, enum type
         
         if(eventuel_noeud != NULL) //différent de NULL => noeud trouvé
         {
-            //printf("NOM : %s DEJA PRESENT A l'ENTREE %d, MISE A JOUR !\n", nom, indice);
-            
             //le modifier
             eventuel_noeud->info.type = type;
         }
         else
         {
-            //printf("PAS PRESENT : AJOUT DE %s DANS LA TABLE A L'ENTREE %d\n", nom, indice);
-            
             //créer l'entrée
             NCHK(noeud = malloc(sizeof(struct noeud)));
             noeud->suivant = NULL;
@@ -190,17 +146,6 @@ struct noeud* insertion(struct tds** tds, char* nom, enum sorte sorte, enum type
             (*tds)->taille_actuelle += 1;
         }
     }
-    
-    /*float load_factor = (float)((*tds)->taille_actuelle) / (float)((*tds)->taille_max); //obtenir le résultat de la division en nombres flottants
-    //printf("LOAD FACTOR : %f\n", load_factor);
-    if(load_factor >= 0.75)
-    {
-        printf("REHASHING REQUIS\n");
-        rehashing(tds);
-        int indice = fonctionHash(nom, (*tds)->taille_max);
-        noeud = get_symbole(*tds, nom);
-    }*/
-    
     return noeud;
 }
 
@@ -214,19 +159,9 @@ struct noeud* insertion_tableau(struct tds** tds, char* nom, enum type type, int
     
     struct noeud* noeud = NULL;
     
-    /*printf("Insertion tableau de dimension %d et les dimensions ont la taille : ", nombre_dimension);
-    for(int i = 0; i < nombre_dimension; i++)
-	{
-		printf("Dim%d : %d ", i+1, taille_dimensions[i]);
-	}
-	printf("\n");*/
-    
-    
     //cas 1 : ajout dans une entrée vide
     if((*tds)->listes[indice] == NULL)
     {
-        //printf("ENTREE %d VIDE : AJOUT DE %s DANS LA TABLE\n", indice, nom);
-        
         //créer l'entrée
         NCHK(noeud = malloc(sizeof(struct noeud)));
         noeud->suivant = NULL;
@@ -266,15 +201,11 @@ struct noeud* insertion_tableau(struct tds** tds, char* nom, enum type type, int
         
         if(eventuel_noeud != NULL) //différent de NULL => noeud trouvé
         {
-            //printf("NOM : %s DEJA PRESENT A l'ENTREE %d, MISE A JOUR !\n", nom, indice);
-            
             //le modifier
             eventuel_noeud->info.type = type;
         }
         else
-        {
-            //printf("PAS PRESENT : AJOUT DE %s DANS LA TABLE A L'ENTREE %d\n", nom, indice);
-            
+        {  
             //créer l'entrée
             NCHK(noeud = malloc(sizeof(struct noeud)));
             noeud->suivant = NULL;
@@ -305,17 +236,6 @@ struct noeud* insertion_tableau(struct tds** tds, char* nom, enum type type, int
             (*tds)->taille_actuelle += 1;
         }
     }
-    
-    /*float load_factor = (float)((*tds)->taille_actuelle) / (float)((*tds)->taille_max); //obtenir le résultat de la division en nombres flottants
-    //printf("LOAD FACTOR : %f\n", load_factor);
-    if(load_factor >= 0.75)
-    {
-        printf("REHASHING REQUIS\n");
-        rehashing(tds);
-        int indice = fonctionHash(nom, (*tds)->taille_max);
-        noeud = get_symbole(*tds, nom);
-    }*/
-    
     return noeud;
 }
 
@@ -328,14 +248,6 @@ struct noeud* insertion_matrix(struct tds** tds, char* nom, int nombre_dimension
     //       car la fonction de hash nous donnerait le même indice pour le même nom
     
     struct noeud* noeud = NULL;
-    
-    /*printf("Insertion tableau de dimension %d et les dimensions ont la taille : ", nombre_dimension);
-    for(int i = 0; i < nombre_dimension; i++)
-	{
-		printf("Dim%d : %d ", i+1, taille_dimensions[i]);
-	}
-	printf("\n");*/
-    
     
     //cas 1 : ajout dans une entrée vide
     if((*tds)->listes[indice] == NULL)
@@ -382,15 +294,11 @@ struct noeud* insertion_matrix(struct tds** tds, char* nom, int nombre_dimension
         
         if(eventuel_noeud != NULL) //différent de NULL => noeud trouvé
         {
-            //printf("NOM : %s DEJA PRESENT A l'ENTREE %d, MISE A JOUR !\n", nom, indice);
-            
             //le modifier
             eventuel_noeud->info.type = TYPE_MATRIX;
         }
         else
         {
-            //printf("PAS PRESENT : AJOUT DE %s DANS LA TABLE A L'ENTREE %d\n", nom, indice);
-            
             //créer l'entrée
             NCHK(noeud = malloc(sizeof(struct noeud)));
             noeud->suivant = NULL;
@@ -423,17 +331,6 @@ struct noeud* insertion_matrix(struct tds** tds, char* nom, int nombre_dimension
             (*tds)->taille_actuelle += 1;
         }
     }
-    
-    /*float load_factor = (float)((*tds)->taille_actuelle) / (float)((*tds)->taille_max); //obtenir le résultat de la division en nombres flottants
-    //printf("LOAD FACTOR : %f\n", load_factor);
-    if(load_factor >= 0.75)
-    {
-        printf("REHASHING REQUIS\n");
-        rehashing(tds);
-        int indice = fonctionHash(nom, (*tds)->taille_max);
-        noeud = get_symbole(*tds, nom);
-    }*/
-    
     return noeud;
 }
 
@@ -456,8 +353,6 @@ struct noeud* insertion_constante(struct tds** tds, enum type type, float valeur
     //cas 1 : ajout dans une entrée vide
     if((*tds)->listes[indice] == NULL)
     {
-        //printf("ENTREE %d VIDE : AJOUT DE %s DANS LA TABLE\n", indice, nom);
-        
         //créer l'entrée
         NCHK(noeud = malloc(sizeof(struct noeud)));
         noeud->suivant = NULL;
@@ -486,16 +381,12 @@ struct noeud* insertion_constante(struct tds** tds, enum type type, float valeur
         struct noeud* eventuel_noeud = get_elem((*tds)->listes[indice], nom);
         
         if(eventuel_noeud != NULL) //différent de NULL => noeud trouvé
-        {
-            //printf("NOM : %s DEJA PRESENT A l'ENTREE %d, MISE A JOUR !\n", nom, indice);
-            
+        { 
             //le modifier
             eventuel_noeud->info.type = type;
         }
         else
         {
-            //printf("PAS PRESENT : AJOUT DE %s DANS LA TABLE A L'ENTREE %d\n", nom, indice);
-            
             //créer l'entrée
             NCHK(noeud = malloc(sizeof(struct noeud)));
             noeud->suivant = NULL;
@@ -520,14 +411,6 @@ struct noeud* insertion_constante(struct tds** tds, enum type type, float valeur
     }
     
 	float load_factor = (float)((*tds)->taille_actuelle) / (float)((*tds)->taille_max); //obtenir le résultat de la division en nombres flottants
-    //printf("LOAD FACTOR : %f\n", load_factor);
-    /*if(load_factor >= 0.75)
-    {
-	printf("REHASHING REQUIS\n");
-	rehashing(tds);
-	int indice = fonctionHash(nom, (*tds)->taille_max);
-	noeud = get_symbole(*tds, nom);
-    }*/
     
     return noeud;
 }
@@ -552,8 +435,6 @@ struct noeud* insertion_constante_str(struct tds** tds, enum type type, char val
     //cas 1 : ajout dans une entrée vide
     if((*tds)->listes[indice] == NULL)
     {
-        //printf("ENTREE %d VIDE : AJOUT DE %s DANS LA TABLE\n", indice, nom);
-        
         //créer l'entrée
         NCHK(noeud = malloc(sizeof(struct noeud)));
         noeud->suivant = NULL;
@@ -577,15 +458,11 @@ struct noeud* insertion_constante_str(struct tds** tds, enum type type, char val
         
         if(eventuel_noeud != NULL) //différent de NULL => noeud trouvé
         {
-            //printf("NOM : %s DEJA PRESENT A l'ENTREE %d, MISE A JOUR !\n", nom, indice);
-            
             //le modifier
             eventuel_noeud->info.type = type;
         }
         else
-        {
-            //printf("PAS PRESENT : AJOUT DE %s DANS LA TABLE A L'ENTREE %d\n", nom, indice);
-            
+        { 
             //créer l'entrée
             NCHK(noeud = malloc(sizeof(struct noeud)));
             noeud->suivant = NULL;
@@ -605,14 +482,6 @@ struct noeud* insertion_constante_str(struct tds** tds, enum type type, char val
     }
     
 	float load_factor = (float)((*tds)->taille_actuelle) / (float)((*tds)->taille_max); //obtenir le résultat de la division en nombres flottants
-    //printf("LOAD FACTOR : %f\n", load_factor);
-    /*if(load_factor >= 0.75)
-    {
-	printf("REHASHING REQUIS\n");
-	rehashing(tds);
-	int indice = fonctionHash(nom, (*tds)->taille_max);
-	noeud = get_symbole(*tds, nom);
-    }*/
     
     return noeud;
 }
@@ -630,7 +499,6 @@ struct noeud* get_symbole_constante(struct tds* tds, float valeur)
             {
 		    if(noeud->info.type == TYPE_FLOAT && noeud->info.valeur_flottante == valeur) //noeud trouvé
 		    {
-		        //printf("Entrée %d non-vide : nom %s présent\n", indice, nom);
 		        return noeud; //noeud = noeud ayant la valeur "valeur"
 		    }
 	    }
@@ -649,7 +517,6 @@ struct noeud* get_symbole_constante_int(struct tds* tds, int valeur)
             {
 		    if(noeud->info.type == TYPE_INT && noeud->info.valeur_entiere == valeur) //noeud trouvé
 		    {
-		        //printf("Entrée %d non-vide : nom %s présent\n", indice, nom);
 		        return noeud; //noeud = noeud ayant la valeur "valeur"
 		    }
 	    }
@@ -669,7 +536,6 @@ struct noeud* get_symbole_constante_str(struct tds* tds, char valeur[MAX_LONGUEU
             {
 		    if(noeud->info.type == TYPE_STR && strcmp(noeud->info.valeur_str, valeur) == 0) //noeud trouvé
 		    {
-		        //printf("Entrée %d non-vide : nom %s présent\n", indice, nom);
 		        return noeud; //noeud = noeud ayant la valeur "valeur"
 		    }
 	    }
@@ -685,7 +551,6 @@ bool recherche(struct tds* tds, char* nom)
     
     if(tds->listes[indice] == NULL) //entrée vide
     {
-        //printf("Entrée %d vide : nom %s non présent\n", indice, nom);
         return false;
     }
     else //entrée non-vide, chercher dans la liste chaînée
@@ -694,13 +559,10 @@ bool recherche(struct tds* tds, char* nom)
         {
             if(strcmp(noeud->info.nom, nom) == 0) //si un noeud de la liste contient ce nom
             {
-                //printf("Entrée %d non-vide : nom %s présent\n", indice, nom);
                 return true; //noeud = noeud ayant le nom "nom"
             }
         }
     }
-    //printf("Entrée %d non-vide : nom %s non présent\n", indice, nom);
-    
     return false; //cas entrée non vide mais clef non présent
 }
 
@@ -711,7 +573,6 @@ struct noeud* get_symbole(struct tds* tds, char* nom)
     
     if(tds->listes[indice] == NULL) //entrée vide
     {
-        //printf("Entrée %d vide : nom %s non présent\n", indice, nom);
         return NULL;
     }
     else //entrée non-vide, chercher dans la liste chaînée
@@ -720,7 +581,6 @@ struct noeud* get_symbole(struct tds* tds, char* nom)
         {
             if(strcmp(noeud->info.nom, nom) == 0) //si un noeud de la liste contient ce nom
             {
-                //printf("Entrée %d non-vide : nom %s présent\n", indice, nom);
                 return noeud; //noeud = noeud ayant le nom "nom"
             }
         }
@@ -801,7 +661,6 @@ void affichage_symbole(struct noeud* noeud)
 {
 	if(noeud != NULL)
 	{
-		//printf("NOEUD : %s et %d\n", noeud->info.nom, noeud->info.sorte);
 		if(noeud->info.sorte == SORTE_CONSTANTE)
 		{
 			if(noeud->info.type == TYPE_INT)
