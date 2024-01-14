@@ -1,5 +1,5 @@
 int main() {
-    int n = 5, k = 2, op;
+    int n = 10, k = 7, op;
 
     if (k < n-k) {
         op = n-k;
@@ -8,14 +8,12 @@ int main() {
     }
 
     int res = 1;
-    //           n
-    for (int i = 5 ; i > op ; i--) {
-        res = res * i;
+    for (int i = n ; i > op ; i--) {
+        res *= i;
     }
     
-    //          n-op
-    for (int j = 2 ; j > 0 ; j--) {
-        res = res / j;
+    for (i = n-op ; i > 0 ; i--) {
+        res /= i;
     }
 
     printf("k = ");
